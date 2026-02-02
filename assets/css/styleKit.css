@@ -743,7 +743,7 @@ h3 {
 
   .notif-content {
     color: rgb(var(--notif-color));
-    background-color: rgba(var(--notif-color), 0.1);
+    background-color: var(--connect-color-btn);
     border-left: 4px solid rgb(var(--notif-color));
     box-shadow: 0 4px 8px rgba(var(--notif-color), 0.15);
     display: flex;
