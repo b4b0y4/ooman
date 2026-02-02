@@ -493,7 +493,7 @@ h3 {
 }
 
 .svg-info {
-  padding: 15px;
+  padding: 10px;
   background: #252525;
 }
 
@@ -569,20 +569,17 @@ h3 {
 
 .svg-actions {
   display: flex;
-  gap: 8px;
-  padding: 10px 15px;
-  background: #1a1a1a;
 }
 
 .svg-actions button {
   flex: 1;
-  padding: 8px;
+  padding: 10px;
   border: none;
   cursor: pointer;
   font-family: inherit;
   font-size: 0.75rem;
   font-weight: bold;
-  background: #333;
+  background: #252525;
   color: var(--color-txt);
   transition: all 0.2s;
   &:hover {
