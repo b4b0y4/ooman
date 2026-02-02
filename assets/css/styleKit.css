@@ -569,6 +569,8 @@ h3 {
 
 .svg-actions {
   display: flex;
+  margin-top: 1px;
+  gap: 1px;
 }
 
 .svg-actions button {
