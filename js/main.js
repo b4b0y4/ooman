@@ -350,7 +350,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const account = data.accounts[0];
     const shortAccount = `${account.slice(0, 6)}...${account.slice(-4)}`;
     Notification.show(
-      `Connected to ${wallet.getLastWallet()} with account ${shortAccount}`,
+      `Connected to ${wallet.getLastWallet()} account: ${shortAccount}`,
       "success",
     );
   });
