@@ -990,9 +990,6 @@ h3 {
   .gallery {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   }
-  .svg-traits {
-    font-size: 0.5rem;
-  }
   #notificationContainer {
     left: 10px;
     right: 10px;
