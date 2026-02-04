@@ -169,23 +169,46 @@ function populateAvailableFilters() {
     });
   });
 
+  // Remove duplicate values from skin and eyes that already exist in type
+  if (traitValues["Type"]) {
+    const typeValuesLower = new Set(
+      [...traitValues["Type"]].map((v) => v.toLowerCase()),
+    );
+
+    if (traitValues["Skin"]) {
+      traitValues["Skin"] = new Set(
+        [...traitValues["Skin"]].filter(
+          (value) => !typeValuesLower.has(value.toLowerCase()),
+        ),
+      );
+    }
+
+    if (traitValues["Eyes"]) {
+      traitValues["Eyes"] = new Set(
+        [...traitValues["Eyes"]].filter(
+          (value) => !typeValuesLower.has(value.toLowerCase()),
+        ),
+      );
+    }
+  }
+
   // Define trait order
   const traitOrder = [
-    "background",
-    "type",
-    "skin",
-    "hair",
-    "eyes",
-    "mouth",
-    "facial hair",
-    "earring",
-    "necklace",
+    "Background",
+    "Type",
+    "Skin",
+    "Head",
+    "Eyes",
+    "Mouth",
+    "Facial Hair",
+    "Earring",
+    "Necklace",
   ];
 
   // Sort trait types
   const sortedTraitTypes = Object.keys(traitValues).sort((a, b) => {
-    const indexA = traitOrder.indexOf(a.toLowerCase());
-    const indexB = traitOrder.indexOf(b.toLowerCase());
+    const indexA = traitOrder.indexOf(a);
+    const indexB = traitOrder.indexOf(b);
     const posA = indexA === -1 ? traitOrder.length : indexA;
     const posB = indexB === -1 ? traitOrder.length : indexB;
     return posA - posB;
