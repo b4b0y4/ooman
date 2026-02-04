@@ -514,7 +514,7 @@ h3 {
 }
 
 .svg-traits {
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   text-wrap: nowrap;
   color: #666;
   line-height: 0.8;
@@ -602,47 +602,6 @@ h3 {
   font-size: 1.1rem;
 }
 
-@media (max-width: 1200px) {
-  .available-filters {
-    column-count: 4;
-  }
-}
-
-@media (max-width: 992px) {
-  .available-filters {
-    column-count: 3;
-  }
-}
-
-@media (max-width: 768px) {
-  h1 {
-    font-size: 1.8rem;
-  }
-
-  .available-filters {
-    column-count: 2;
-    column-gap: 10px;
-  }
-
-  .filter-category {
-    margin-bottom: 10px;
-  }
-
-  .filter-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .results-count {
-    margin-left: 0;
-    text-align: center;
-  }
-
-  .gallery {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  }
-}
-
 .svg-preview img.lazy {
   opacity: 0;
   transition: opacity 0.3s ease-in-out;
@@ -650,16 +609,6 @@ h3 {
 
 .svg-preview img.loaded {
   opacity: 1;
-}
-
-@media (max-width: 480px) {
-  .available-filters {
-    column-count: 1;
-  }
-
-  .svg-traits {
-    font-size: 0.5rem;
-  }
 }
 
 /* Copy */
@@ -881,27 +830,6 @@ h3 {
   white-space: nowrap;
 }
 
-@media (max-width: 480px) {
-  #notificationContainer {
-    left: 10px;
-    right: 10px;
-    bottom: 10px;
-    max-width: none;
-  }
-  .notif-content {
-    padding: 12px 16px;
-    font-size: 14px;
-  }
-  .tx-icon {
-    width: 28px;
-    height: 28px;
-  }
-  .tx-spinner {
-    width: 16px;
-    height: 16px;
-  }
-}
-
 /* RPC Modal */
 #settings-btn {
   border: 0;
@@ -1021,5 +949,66 @@ h3 {
   &:hover {
     background-color: var(--color-hvr);
     color: var(--color-bg);
+  }
+}
+
+@media (max-width: 992px) {
+  .available-filters {
+    column-count: 3;
+  }
+}
+
+@media (max-width: 768px) {
+  h1 {
+    font-size: 1.8rem;
+  }
+
+  .available-filters {
+    column-count: 2;
+    column-gap: 10px;
+  }
+
+  .filter-category {
+    margin-bottom: 10px;
+  }
+
+  .filter-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .results-count {
+    margin-left: 0;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .available-filters {
+    column-count: 1;
+  }
+  .gallery {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+  .svg-traits {
+    font-size: 0.5rem;
+  }
+  #notificationContainer {
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    max-width: none;
+  }
+  .notif-content {
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+  .tx-icon {
+    width: 28px;
+    height: 28px;
+  }
+  .tx-spinner {
+    width: 16px;
+    height: 16px;
   }
 }
