@@ -415,7 +415,7 @@ h3 {
 }
 
 .available-filters {
-  column-count: 5;
+  column-count: 4;
   column-gap: 15px;
   margin-bottom: 15px;
 }

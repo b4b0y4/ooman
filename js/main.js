@@ -172,14 +172,14 @@ function populateAvailableFilters() {
   // Define trait order
   const traitOrder = [
     "background",
-    "character type",
-    "skin tone",
-    "hair or hat",
+    "type",
+    "skin",
+    "hair",
     "eyes",
-    "glasses",
     "mouth",
     "facial hair",
-    "accessory",
+    "earring",
+    "necklace",
   ];
 
   // Sort trait types
