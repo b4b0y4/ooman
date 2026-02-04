@@ -698,7 +698,7 @@ export class ConnectWallet {
         </div>
       `;
       if (ensAvatar) {
-        buttonContent += `<img src="${ensAvatar}" style="border-radius: 50%">`;
+        buttonContent += `<img src="${ensAvatar}" style="border-radius: 5px">`;
       }
 
       this.elements.connectBtn.innerHTML = buttonContent;
