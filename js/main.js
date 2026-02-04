@@ -313,7 +313,7 @@ function downloadSVG(id, name) {
 
   const link = document.createElement("a");
   link.href = url;
-  link.download = `${name.replace(/\s+/g, "_")}.svg`;
+  link.download = `${name.replace(/\s+/g, "")}.svg`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -321,6 +321,31 @@ function downloadSVG(id, name) {
   URL.revokeObjectURL(url);
 }
 
+// Demo transaction tracker
+// document.querySelector("#demo-tx")?.addEventListener("click", async () => {
+//   if (!wallet.isConnected()) {
+//     Notification.show("Please connect your wallet first", "warning");
+//     return;
+//   }
+
+//   try {
+//     const provider = wallet.getEthersProvider();
+//     const signer = await provider.getSigner();
+
+//     // Demo transaction (send 0 ETH to self)
+//     const account = await wallet.getAccount();
+//     const tx = await signer.sendTransaction({
+//       to: account,
+//       value: 0,
+//     });
+
+//     Notification.track(tx, {
+//       label: "Demo Transaction",
+//     });
+//   } catch (error) {
+//     Notification.show("Transaction failed: " + error.message, "danger");
+//   }
+// });
 // Confirm claim (placeholder for integration)
 function claim() {
   if (!currentClaimItem) return;
@@ -381,32 +406,6 @@ document.addEventListener("DOMContentLoaded", () => {
   wallet.onDisconnect(() => {
     Notification.show("Wallet disconnected", "warning");
   });
-
-  // Demo transaction tracker
-  // document.querySelector("#demo-tx")?.addEventListener("click", async () => {
-  //   if (!wallet.isConnected()) {
-  //     Notification.show("Please connect your wallet first", "warning");
-  //     return;
-  //   }
-
-  //   try {
-  //     const provider = wallet.getEthersProvider();
-  //     const signer = await provider.getSigner();
-
-  //     // Demo transaction (send 0 ETH to self)
-  //     const account = await wallet.getAccount();
-  //     const tx = await signer.sendTransaction({
-  //       to: account,
-  //       value: 0,
-  //     });
-
-  //     Notification.track(tx, {
-  //       label: "Demo Transaction",
-  //     });
-  //   } catch (error) {
-  //     Notification.show("Transaction failed: " + error.message, "danger");
-  //   }
-  // });
 });
 
 // Make functions globally available for onclick handlers
@@ -414,5 +413,6 @@ window.toggleFilters = toggleFilters;
 window.addFilter = addFilter;
 window.removeFilter = removeFilter;
 window.toggleTraits = toggleTraits;
+
 window.downloadSVG = downloadSVG;
 window.claim = claim;
