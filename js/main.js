@@ -413,6 +413,6 @@ document.addEventListener("DOMContentLoaded", () => {
 window.toggleFilters = toggleFilters;
 window.addFilter = addFilter;
 window.removeFilter = removeFilter;
+window.toggleTraits = toggleTraits;
 window.downloadSVG = downloadSVG;
 window.claim = claim;
-window.toggleTraits = toggleTraits;
