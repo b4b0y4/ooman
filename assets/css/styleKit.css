@@ -1,12 +1,29 @@
+/* ============================================================
+   CSS VARIABLES
+   ========================================================= */
+
 :root {
+  /* Colors */
   --color-bg: #0a0a0a;
   --color-txt: #fff;
   --color-2: #1a1a1a;
   --color-3: #252525;
   --color-hvr: #00d4ff;
+
+  /* Borders */
   --border: 1px solid #333;
+
+  /* Special Colors */
   --connect-dot: 46, 204, 113;
+  --color-blue: 75, 186, 231;
+  --color-green: 46, 204, 113;
+  --color-orange: 255, 165, 0;
+  --color-red: 234, 51, 35;
 }
+
+/* ============================================================
+   GLOBAL RESETS
+   ========================================================= */
 
 * {
   margin: 0;
@@ -22,6 +39,10 @@ body {
   padding: 20px;
 }
 
+/* ============================================================
+   LAYOUT
+   ========================================================= */
+
 .container {
   max-width: 1400px;
   margin: 0 auto;
@@ -33,6 +54,18 @@ header {
   align-items: center;
 }
 
+.wrapper {
+  display: flex;
+  justify-content: end;
+  align-items: center;
+  width: 100%;
+  gap: 10px;
+}
+
+/* ============================================================
+   TYPOGRAPHY
+   ========================================================= */
+
 h1 {
   font-size: 2.5rem;
   text-wrap: nowrap;
@@ -42,15 +75,22 @@ h1 {
   text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
 }
 
-.wrapper {
-  display: flex;
-  justify-content: end;
-  align-items: center;
-  width: 100%;
-  gap: 10px;
+h3 {
+  color: var(--color-hvr);
+  margin-bottom: 20px;
+  font-size: 1.2rem;
 }
 
-/* Connect */
+.subtitle {
+  color: #666;
+  font-size: 1rem;
+  margin: 10px 0 40px;
+}
+
+/* ============================================================
+   WALLET CONNECTION
+   ========================================================= */
+
 .connect-widget {
   position: relative;
   user-select: none;
@@ -71,53 +111,63 @@ h1 {
   padding: 7.5px 15px;
   cursor: pointer;
   transition: all 0.3s ease-in-out;
-  &:hover {
-    background-color: var(--color-hvr);
-    color: var(--color-bg);
-  }
-  &.connected {
-    background-color: transparent;
-    padding: 7.5px 15px;
-    gap: 8px;
-    &:hover {
-      color: inherit;
-    }
-  }
-  &.ens-resolved {
-    flex-direction: row-reverse;
-    justify-content: space-between;
-    gap: 8px;
-    height: auto;
-    padding: 5px 10px;
-    & img {
-      margin-right: 0;
-    }
-  }
-  & .ens-details {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  & .ens-name {
-    display: flex;
-    align-items: center;
-    font-size: 0.9em;
-  }
-  & .ens-address-row {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-  & .ens-address {
-    font-size: 0.6em;
-    opacity: 0.7;
-  }
-  & img {
-    width: 28px;
-    height: 28px;
-    margin-right: 5px;
-    border: 1px solid var(--color-bg);
-  }
+}
+
+.connect-btn:hover {
+  background-color: var(--color-hvr);
+  color: var(--color-bg);
+}
+
+.connect-btn.connected {
+  background-color: transparent;
+  padding: 7.5px 15px;
+  gap: 8px;
+}
+
+.connect-btn.connected:hover {
+  color: inherit;
+}
+
+.connect-btn.ens-resolved {
+  flex-direction: row-reverse;
+  justify-content: space-between;
+  gap: 8px;
+  height: auto;
+  padding: 5px 10px;
+}
+
+.connect-btn.ens-resolved img {
+  margin-right: 0;
+}
+
+.connect-btn .ens-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.connect-btn .ens-name {
+  display: flex;
+  align-items: center;
+  font-size: 0.9em;
+}
+
+.connect-btn .ens-address-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.connect-btn .ens-address {
+  font-size: 0.6em;
+  opacity: 0.7;
+}
+
+.connect-btn img {
+  width: 28px;
+  height: 28px;
+  margin-right: 5px;
+  border: 1px solid var(--color-bg);
 }
 
 .connect-address-text {
@@ -132,22 +182,25 @@ h1 {
   width: 18px;
   height: 18px;
   flex-shrink: 0;
-  & svg {
-    display: block;
-    width: 14px;
-    height: 14px;
-  }
+}
+
+.connect-copy-icon svg {
+  display: block;
+  width: 14px;
+  height: 14px;
 }
 
 .ens-address-row .connect-copy-icon {
   width: 10px;
   height: 10px;
-  & svg {
-    width: 8px;
-    height: 8px;
-  }
 }
 
+.ens-address-row .connect-copy-icon svg {
+  width: 8px;
+  height: 8px;
+}
+
+/* Connect Modal */
 .connect-modal {
   position: absolute;
   top: 100%;
@@ -163,11 +216,12 @@ h1 {
   transition:
     opacity 0.3s ease-in-out,
     transform 0.3s ease-in-out;
-  &.show {
-    pointer-events: auto;
-    opacity: 1;
-    transform: scale(1);
-  }
+}
+
+.connect-modal.show {
+  pointer-events: auto;
+  opacity: 1;
+  transform: scale(1);
 }
 
 .connect-get-wallet {
@@ -183,55 +237,61 @@ h1 {
   cursor: pointer;
   transition: all 0.3s ease-in-out;
   margin-bottom: 0;
-  &:hover {
-    background-color: var(--color-hvr);
-  }
-  & a {
-    text-decoration: none;
-    color: var(--color-txt);
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    &:hover {
-      color: var(--color-bg);
-    }
-  }
 }
 
-.connect-wallet-list {
-  & button {
-    position: relative;
-    display: flex;
-    align-items: center;
-    font-size: 1em;
-    border: none;
-    color: var(--color-txt);
-    background-color: var(--color-2);
-    width: 100%;
-    height: 50px;
-    padding: 7.5px 40px 7.5px 7.5px;
-    margin: 2.5px 0;
-    white-space: nowrap;
-    cursor: pointer;
-    transition: all 0.3s ease-in-out;
-    &:hover {
-      background-color: var(--color-hvr);
-      color: var(--color-bg);
-    }
-    &:last-child {
-      margin-bottom: 0;
-    }
-    & img {
-      height: 32px;
-      width: 32px;
-      margin-right: 8px;
-      border-radius: 5px;
-    }
-  }
+.connect-get-wallet:hover {
+  background-color: var(--color-hvr);
 }
 
+.connect-get-wallet a {
+  text-decoration: none;
+  color: var(--color-txt);
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.connect-get-wallet a:hover {
+  color: var(--color-bg);
+}
+
+/* Wallet List */
+.connect-wallet-list button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  font-size: 1em;
+  border: none;
+  color: var(--color-txt);
+  background-color: var(--color-2);
+  width: 100%;
+  height: 50px;
+  padding: 7.5px 40px 7.5px 7.5px;
+  margin: 2.5px 0;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+}
+
+.connect-wallet-list button:hover {
+  background-color: var(--color-hvr);
+  color: var(--color-bg);
+}
+
+.connect-wallet-list button:last-child {
+  margin-bottom: 0;
+}
+
+.connect-wallet-list button img {
+  height: 32px;
+  width: 32px;
+  margin-right: 8px;
+  border-radius: 5px;
+}
+
+/* Chain List */
 .connect-chain-list {
   display: flex;
   align-items: center;
@@ -243,55 +303,64 @@ h1 {
   box-sizing: border-box;
   margin: 0;
   transition: all 0.3s ease-in-out;
-  &:hover {
-    background-color: var(--color-hvr);
-  }
-  &:hover .connect-name {
-    color: var(--color-bg);
-  }
-  & button {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background-color: transparent;
-    border: none;
-    padding: 0;
-    margin: 0;
-    cursor: pointer;
-    font-size: 1em;
-    color: var(--color-txt);
-    & img {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      border: 1px solid var(--color-bg);
-      flex-shrink: 0;
-    }
-    &.chain-single {
-      display: flex;
-      flex: 1;
-      justify-content: flex-start;
-      & img {
-        width: 32px;
-        height: 32px;
-        margin-right: 8px;
-      }
-      & .connect-name {
-        flex: 1;
-        text-align: left;
-        white-space: nowrap;
-        overflow: hidden;
-        transition: all 0.3s ease-in-out;
-      }
-      & .connect-dot {
-        position: absolute;
-        right: 7.5px;
-      }
-    }
-  }
 }
 
+.connect-chain-list:hover {
+  background-color: var(--color-hvr);
+}
+
+.connect-chain-list:hover .connect-name {
+  color: var(--color-bg);
+}
+
+.connect-chain-list button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  font-size: 1em;
+  color: var(--color-txt);
+}
+
+.connect-chain-list button img {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--color-bg);
+  flex-shrink: 0;
+}
+
+.connect-chain-list button.chain-single {
+  display: flex;
+  flex: 1;
+  justify-content: flex-start;
+}
+
+.connect-chain-list button.chain-single img {
+  width: 32px;
+  height: 32px;
+  margin-right: 8px;
+}
+
+.connect-chain-list button.chain-single .connect-name {
+  flex: 1;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: all 0.3s ease-in-out;
+}
+
+.connect-chain-list button.chain-single .connect-dot {
+  position: absolute;
+  right: 7.5px;
+}
+
+/* Connection Indicators */
 .connect-dot-icon {
   position: absolute;
   top: -2px;
@@ -325,19 +394,10 @@ h1 {
   }
 }
 
-.subtitle {
-  color: #666;
-  font-size: 1rem;
-  margin: 10px 0 40px;
-}
+/* ============================================================
+   FILTERS
+   ========================================================= */
 
-h3 {
-  color: var(--color-hvr);
-  margin-bottom: 20px;
-  font-size: 1.2rem;
-}
-
-/* Filters Panel */
 .filters-panel {
   background: var(--color-2);
   margin-bottom: 30px;
@@ -379,11 +439,13 @@ h3 {
   display: none;
 }
 
+/* Results Count */
 .results-count {
   color: #888;
   font-size: 0.9rem;
 }
 
+/* Active Filters */
 .active-filters {
   display: flex;
   flex-wrap: wrap;
@@ -414,6 +476,13 @@ h3 {
   font-size: 1rem;
 }
 
+.no-filters {
+  color: #666;
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+/* Available Filters */
 .available-filters {
   column-count: 4;
   column-gap: 15px;
@@ -460,12 +529,10 @@ h3 {
   border-color: var(--color-hvr);
 }
 
-.btn-full {
-  width: 100%;
-  margin-top: 20px;
-}
+/* ============================================================
+   GALLERY
+   ========================================================= */
 
-/* Gallery */
 .gallery {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -481,18 +548,6 @@ h3 {
   contain-intrinsic-size: 0 300px;
   contain: layout style paint;
   cursor: pointer;
-  transition:
-    transform 0.2s,
-    box-shadow 0.2s;
-}
-
-.svg-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 25px rgba(0, 212, 255, 0.15);
-}
-
-.svg-card:active {
-  transform: translateY(-2px);
 }
 
 .svg-preview {
@@ -510,6 +565,15 @@ h3 {
   image-rendering: pixelated;
 }
 
+.svg-preview img.lazy {
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.svg-preview img.loaded {
+  opacity: 1;
+}
+
 .svg-info {
   padding: 10px;
   background: var(--color-3);
@@ -519,12 +583,21 @@ h3 {
   font-size: 0.85rem;
   color: var(--color-hvr);
   font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-.no-filters {
-  color: #666;
-  font-size: 0.85rem;
-  font-style: italic;
+.claimed-badge {
+  display: inline-block;
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  background: var(--color-hvr);
+  color: var(--color-bg);
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  border-radius: 2px;
 }
 
 .empty-state {
@@ -538,16 +611,11 @@ h3 {
   font-size: 1.1rem;
 }
 
-.svg-preview img.lazy {
-  opacity: 0;
-  transition: opacity 0.3s ease-in-out;
-}
+/* ============================================================
+   MODALS
+   ========================================================= */
 
-.svg-preview img.loaded {
-  opacity: 1;
-}
-
-/* Item Modal (Bottom Sheet) */
+/* Item Modal */
 .item-modal {
   position: fixed;
   z-index: 2000;
@@ -682,71 +750,148 @@ h3 {
   color: var(--color-bg);
 }
 
-@media (max-width: 768px) {
-  .item-modal-body {
-    flex-direction: row;
-    align-items: flex-start;
-    text-align: left;
-    gap: 15px;
-  }
-
-  .item-modal-image {
-    width: 100px;
-    height: 100px;
-  }
-
-  .item-modal-info h3 {
-    font-size: 1.1rem;
-    margin-bottom: 10px;
-  }
-
-  .modal-traits {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 4px 10px;
-    margin-bottom: 15px;
-  }
-
-  .modal-trait {
-    font-size: 0.8rem;
-  }
-
-  .item-modal-actions {
-    gap: 8px;
-  }
-
-  .btn-modal {
-    padding: 8px;
-    font-size: 0.9em;
-  }
+/* RPC Modal */
+.rpc-modal {
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease-in-out;
 }
 
-@media (max-width: 480px) {
-  .item-modal-content {
-    padding: 15px;
-  }
-
-  .item-modal-body {
-    flex-direction: row;
-    gap: 12px;
-  }
-
-  .item-modal-image {
-    width: 80px;
-    height: 80px;
-  }
-
-  .modal-traits {
-    grid-template-columns: 1fr;
-    gap: 3px;
-  }
-
-  .item-modal-info h3 {
-    font-size: 1rem;
-    margin-bottom: 8px;
-  }
+.rpc-modal.show {
+  opacity: 1;
+  pointer-events: auto;
 }
 
-/* Copy */
+.rpc-modal-content {
+  background-color: var(--color-bg);
+  padding: 20px;
+  border: var(--border);
+  width: 90%;
+  max-width: 500px;
+  color: var(--color-txt);
+  transform: scale(0.9);
+  transition: transform 0.3s ease-in-out;
+}
+
+.rpc-modal.show .rpc-modal-content {
+  transform: scale(1);
+}
+
+.rpc-close-btn {
+  float: right;
+  width: 24px;
+  font-size: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.rpc-close-btn:hover {
+  background-color: var(--color-2);
+}
+
+#rpc-inputs {
+  display: grid;
+  gap: 15px;
+  margin: 20px 0;
+}
+
+#rpc-inputs div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+#rpc-inputs label {
+  font-weight: 500;
+  font-size: 1em;
+}
+
+#rpc-inputs input {
+  padding: 7.5px 15px;
+  border: 1px solid var(--color-2);
+  background-color: var(--color-bg);
+  color: var(--color-txt);
+  font-size: 1em;
+}
+
+#rpc-inputs input:focus {
+  outline: none;
+  border-color: var(--color-hvr);
+}
+
+#save-rpc-btn {
+  width: 100%;
+  padding: 10px;
+  background-color: var(--color-2);
+  color: var(--color-txt);
+  border: none;
+  cursor: pointer;
+  font-size: 1.1em;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+#save-rpc-btn:hover {
+  background-color: var(--color-hvr);
+  color: var(--color-bg);
+}
+
+/* ============================================================
+   BUTTONS
+   ======================================================== */
+
+.btn-full {
+  width: 100%;
+  margin-top: 20px;
+}
+
+#settings-btn {
+  border: 0;
+  background: 0;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-txt);
+  opacity: 0.6;
+  transition: opacity 0.3s;
+}
+
+#settings-btn:hover {
+  opacity: 0.9;
+}
+
+#settings-btn svg {
+  opacity: 1;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#settings-btn.active svg {
+  transform: rotate(90deg);
+}
+
+/* ============================================================
+   UTILITIES
+   ========================================================= */
+
+/* Copy Functionality */
 [data-copy] {
   position: relative;
   cursor: pointer;
@@ -777,13 +922,9 @@ h3 {
   opacity: 1;
 }
 
-/* Notification */
-:root {
-  --color-blue: 75, 186, 231;
-  --color-green: 46, 204, 113;
-  --color-orange: 255, 165, 0;
-  --color-red: 234, 51, 35;
-}
+/* ============================================================
+   NOTIFICATIONS
+   ========================================================= */
 
 #notificationContainer {
   position: fixed;
@@ -804,46 +945,52 @@ h3 {
   transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   pointer-events: auto;
   max-width: 100%;
-  &.show {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  &.hide {
-    transform: translateX(-100%);
-    opacity: 0;
-  }
-  &.info,
-  &.tx-notification.pending {
-    --notif-color: var(--color-blue);
-  }
-  &.success,
-  &.tx-notification.success {
-    --notif-color: var(--color-green);
-  }
-  &.warning {
-    --notif-color: var(--color-orange);
-  }
-  &.danger,
-  &.tx-notification.failed {
-    --notif-color: var(--color-red);
-  }
+}
 
-  .notif-content {
-    color: rgb(var(--notif-color));
-    background-color: var(--color-2);
-    border-left: 4px solid rgb(var(--notif-color));
-    box-shadow: 0 4px 8px rgba(var(--notif-color), 0.15);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 15px;
-    font-size: 16px;
-    font-weight: 500;
-    backdrop-filter: blur(20px);
-    position: relative;
-    overflow: hidden;
-  }
+.notification.show {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.notification.hide {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+.notification.info,
+.notification.tx-notification.pending {
+  --notif-color: var(--color-blue);
+}
+
+.notification.success,
+.notification.tx-notification.success {
+  --notif-color: var(--color-green);
+}
+
+.notification.warning {
+  --notif-color: var(--color-orange);
+}
+
+.notification.danger,
+.notification.tx-notification.failed {
+  --notif-color: var(--color-red);
+}
+
+.notif-content {
+  color: rgb(var(--notif-color));
+  background-color: var(--color-2);
+  border-left: 4px solid rgb(var(--notif-color));
+  box-shadow: 0 4px 8px rgba(var(--notif-color), 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 15px;
+  font-size: 16px;
+  font-weight: 500;
+  backdrop-filter: blur(20px);
+  position: relative;
+  overflow: hidden;
 }
 
 .notif-close {
@@ -858,31 +1005,35 @@ h3 {
   justify-content: center;
   color: currentColor;
   transition: background-color 0.3s;
-  &:hover {
-    background-color: rgba(var(--notif-color), 0.2);
-  }
 }
 
-.notification.tx-notification {
-  &.pending .tx-icon {
-    color: rgb(var(--color-blue));
-  }
-  &.success .tx-icon {
-    color: rgb(var(--color-green));
-  }
-  &.failed .tx-icon {
-    color: rgb(var(--color-red));
-  }
-  &.success .tx-icon::before {
-    content: "✓";
-    font-size: 20px;
-    font-weight: bold;
-  }
-  &.failed .tx-icon::before {
-    content: "✗";
-    font-size: 20px;
-    font-weight: bold;
-  }
+.notif-close:hover {
+  background-color: rgba(var(--notif-color), 0.2);
+}
+
+/* Transaction Notifications */
+.notification.tx-notification.pending .tx-icon {
+  color: rgb(var(--color-blue));
+}
+
+.notification.tx-notification.success .tx-icon {
+  color: rgb(var(--color-green));
+}
+
+.notification.tx-notification.failed .tx-icon {
+  color: rgb(var(--color-red));
+}
+
+.notification.tx-notification.success .tx-icon::before {
+  content: "✓";
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.notification.tx-notification.failed .tx-icon::before {
+  content: "✗";
+  font-size: 20px;
+  font-weight: bold;
 }
 
 .progress-bar {
@@ -937,25 +1088,30 @@ h3 {
   flex-direction: column;
   gap: 4px;
 }
+
 .tx-label {
   font-size: 14px;
   font-weight: 600;
   color: currentColor;
 }
+
 .tx-hash {
   font-size: 12px;
   color: currentColor;
   opacity: 0.8;
-  a {
-    color: inherit;
-    text-decoration: none;
-    transition: opacity 0.3s;
-    &:hover {
-      opacity: 1;
-      text-decoration: underline;
-    }
-  }
 }
+
+.tx-hash a {
+  color: inherit;
+  text-decoration: none;
+  transition: opacity 0.3s;
+}
+
+.tx-hash a:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
 .tx-status {
   font-size: 12px;
   margin-left: 8px;
@@ -965,127 +1121,9 @@ h3 {
   white-space: nowrap;
 }
 
-/* RPC Modal */
-#settings-btn {
-  border: 0;
-  background: 0;
-  cursor: pointer;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-txt);
-  opacity: 0.6;
-  transition: opacity 0.3s;
-  &:hover {
-    opacity: 0.9;
-  }
-  & svg {
-    opacity: 1;
-    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  &.active svg {
-    transform: rotate(90deg);
-  }
-}
-
-.rpc-modal {
-  position: fixed;
-  z-index: 1000;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  overflow: auto;
-  background-color: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease-in-out;
-  &.show {
-    opacity: 1;
-    pointer-events: auto;
-  }
-}
-
-.rpc-modal-content {
-  background-color: var(--color-bg);
-  padding: 20px;
-  border: var(--border);
-  width: 90%;
-  max-width: 500px;
-  color: var(--color-txt);
-  transform: scale(0.9);
-  transition: transform 0.3s ease-in-out;
-}
-
-.rpc-modal.show .rpc-modal-content {
-  transform: scale(1);
-}
-
-.rpc-close-btn {
-  float: right;
-  width: 24px;
-  font-size: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background-color 0.3s;
-  &:hover {
-    background-color: var(--color-2);
-  }
-}
-
-#rpc-inputs {
-  display: grid;
-  gap: 15px;
-  margin: 20px 0;
-}
-
-#rpc-inputs div {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-#rpc-inputs label {
-  font-weight: 500;
-  font-size: 1em;
-}
-
-#rpc-inputs input {
-  padding: 7.5px 15px;
-  border: 1px solid var(--color-2);
-  background-color: var(--color-bg);
-  color: var(--color-txt);
-  font-size: 1em;
-}
-
-#rpc-inputs input:focus {
-  outline: none;
-  border-color: var(--color-hvr);
-}
-
-#save-rpc-btn {
-  width: 100%;
-  padding: 10px;
-  background-color: var(--color-2);
-  color: var(--color-txt);
-  border: none;
-  cursor: pointer;
-  font-size: 1.1em;
-  font-weight: 500;
-  transition: all 0.3s;
-  &:hover {
-    background-color: var(--color-hvr);
-    color: var(--color-bg);
-  }
-}
+/* ============================================================
+   RESPONSIVE DESIGN
+   ========================================================= */
 
 @media (max-width: 992px) {
   .available-filters {
@@ -1118,6 +1156,42 @@ h3 {
     margin-left: 0;
     text-align: center;
   }
+
+  .item-modal-body {
+    flex-direction: row;
+    align-items: flex-start;
+    text-align: left;
+    gap: 15px;
+  }
+
+  .item-modal-image {
+    width: 100px;
+    height: 100px;
+  }
+
+  .item-modal-info h3 {
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+  }
+
+  .modal-traits {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px 10px;
+    margin-bottom: 15px;
+  }
+
+  .modal-trait {
+    font-size: 0.8rem;
+  }
+
+  .item-modal-actions {
+    gap: 8px;
+  }
+
+  .btn-modal {
+    padding: 8px;
+    font-size: 0.9em;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1125,28 +1199,58 @@ h3 {
     font-size: 1.5rem;
     letter-spacing: 2px;
   }
+
   .available-filters {
     column-count: 1;
   }
+
   .gallery {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   }
+
   #notificationContainer {
     left: 10px;
     right: 10px;
     bottom: 10px;
     max-width: none;
   }
+
   .notif-content {
     padding: 12px 16px;
     font-size: 14px;
   }
+
   .tx-icon {
     width: 28px;
     height: 28px;
   }
+
   .tx-spinner {
     width: 16px;
     height: 16px;
+  }
+
+  .item-modal-content {
+    padding: 15px;
+  }
+
+  .item-modal-body {
+    flex-direction: row;
+    gap: 12px;
+  }
+
+  .item-modal-image {
+    width: 80px;
+    height: 80px;
+  }
+
+  .modal-traits {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+
+  .item-modal-info h3 {
+    font-size: 1rem;
+    margin-bottom: 8px;
   }
 }
