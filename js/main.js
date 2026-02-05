@@ -486,8 +486,6 @@ async function claim(itemName) {
     Notification.track(tx, {
       label: `Claiming ${item.name}`,
     });
-
-    await tx.wait();
   } catch (error) {
     Notification.show("Claim failed: " + error.message, "danger");
   }
