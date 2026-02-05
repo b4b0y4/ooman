@@ -47,7 +47,7 @@ h1 {
   justify-content: end;
   align-items: center;
   width: 100%;
-  gap: 10px;
+  gap: 2px;
 }
 
 /* Connect */
@@ -835,8 +835,8 @@ h3 {
   border: 0;
   background: 0;
   cursor: pointer;
-  width: 36px;
-  height: 36px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
