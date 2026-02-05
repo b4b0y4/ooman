@@ -1,4 +1,4 @@
-// import { ethers } from "./libs/ethers.min.js";
+import { ethers } from "./libs/ethers.min.js";
 import { ConnectWallet, Notification, getRpcUrl } from "./dappkit.js";
 
 const wallet = new ConnectWallet();
@@ -9,6 +9,12 @@ let filteredMetadata = [];
 let currentClaimItem = null;
 let activeFilters = []; // Array of {trait_type, value} objects
 let lazyLoadObserver = null;
+
+// Virtual scrolling configuration
+const CHUNK_SIZE = 100; // Number of items to render per chunk
+const CHUNK_DELAY = 16; // ms between chunks (~60fps)
+let renderQueue = [];
+let isRendering = false;
 
 // Initialize app
 document.addEventListener("DOMContentLoaded", async () => {
@@ -23,8 +29,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 function setupLazyLoading() {
   const options = {
     root: null, // viewport
-    rootMargin: "50px", // Start loading 50px before entering viewport
-    threshold: 0.01,
+    rootMargin: "100px", // Increased buffer for smoother scrolling
+    threshold: 0,
   };
 
   lazyLoadObserver = new IntersectionObserver((entries, observer) => {
@@ -34,6 +40,7 @@ function setupLazyLoading() {
         const src = img.dataset.src;
 
         if (src) {
+          // Use decode() for better performance
           img.src = src;
           img.removeAttribute("data-src");
           img.classList.remove("lazy");
@@ -45,14 +52,29 @@ function setupLazyLoading() {
   }, options);
 }
 
-// Observe all lazy load images
+// Observe all lazy load images (batch processing for large numbers)
 function observeLazyImages() {
+  if (!lazyLoadObserver) return;
+
   const lazyImages = document.querySelectorAll("img.lazy");
-  lazyImages.forEach((img) => {
-    if (lazyLoadObserver) {
+
+  // Process in smaller batches to avoid blocking
+  const batchSize = 50;
+  let index = 0;
+
+  function observeBatch() {
+    const batch = Array.from(lazyImages).slice(index, index + batchSize);
+    batch.forEach((img) => {
       lazyLoadObserver.observe(img);
+    });
+
+    index += batchSize;
+    if (index < lazyImages.length) {
+      requestAnimationFrame(observeBatch);
     }
-  });
+  }
+
+  observeBatch();
 }
 
 // Load metadata from JSON file
@@ -158,38 +180,33 @@ function populateAvailableFilters() {
   const container = document.getElementById("available-filters");
   if (!container || metadata.length === 0) return;
 
-  // Extract all unique traits and their values
-  const traitValues = {};
+  // Extract traits and count frequency
+  const traitValueCounts = {};
   metadata.forEach((item) => {
     item.attributes.forEach((attr) => {
-      if (!traitValues[attr.trait_type]) {
-        traitValues[attr.trait_type] = new Set();
+      if (!traitValueCounts[attr.trait_type]) {
+        traitValueCounts[attr.trait_type] = {};
       }
-      traitValues[attr.trait_type].add(attr.value);
+      traitValueCounts[attr.trait_type][attr.value] =
+        (traitValueCounts[attr.trait_type][attr.value] || 0) + 1;
     });
   });
 
-  // Remove duplicate values from skin and eyes that already exist in type
-  if (traitValues["Type"]) {
+  // Remove duplicates from Skin/Eyes that exist in Type
+  if (traitValueCounts["Type"]) {
     const typeValuesLower = new Set(
-      [...traitValues["Type"]].map((v) => v.toLowerCase()),
+      Object.keys(traitValueCounts["Type"]).map((v) => v.toLowerCase()),
     );
 
-    if (traitValues["Skin"]) {
-      traitValues["Skin"] = new Set(
-        [...traitValues["Skin"]].filter(
-          (value) => !typeValuesLower.has(value.toLowerCase()),
-        ),
-      );
-    }
-
-    if (traitValues["Eyes"]) {
-      traitValues["Eyes"] = new Set(
-        [...traitValues["Eyes"]].filter(
-          (value) => !typeValuesLower.has(value.toLowerCase()),
-        ),
-      );
-    }
+    ["Skin", "Eyes"].forEach((trait) => {
+      if (traitValueCounts[trait]) {
+        Object.keys(traitValueCounts[trait]).forEach((value) => {
+          if (typeValuesLower.has(value.toLowerCase())) {
+            delete traitValueCounts[trait][value];
+          }
+        });
+      }
+    });
   }
 
   // Define trait order
@@ -205,35 +222,47 @@ function populateAvailableFilters() {
     "Necklace",
   ];
 
-  // Sort trait types
-  const sortedTraitTypes = Object.keys(traitValues).sort((a, b) => {
+  const sortedTraitTypes = Object.keys(traitValueCounts).sort((a, b) => {
     const indexA = traitOrder.indexOf(a);
     const indexB = traitOrder.indexOf(b);
-    const posA = indexA === -1 ? traitOrder.length : indexA;
-    const posB = indexB === -1 ? traitOrder.length : indexB;
-    return posA - posB;
+    return (
+      (indexA === -1 ? traitOrder.length : indexA) -
+      (indexB === -1 ? traitOrder.length : indexB)
+    );
   });
 
-  // Build HTML
-  container.innerHTML = sortedTraitTypes
-    .map((traitType) => {
-      const values = Array.from(traitValues[traitType]).sort();
-      const valuesHtml = values
-        .map((value) => {
-          const escapedType = traitType.replace(/'/g, "\\'");
-          const escapedValue = value.replace(/'/g, "\\'");
-          return `<span class="filter-value" onclick="addFilter('${escapedType}', '${escapedValue}')">${value}</span>`;
-        })
-        .join("");
+  // Build HTML with all values as clickable buttons
+  const fragment = document.createDocumentFragment();
 
-      return `
-      <div class="filter-category">
-        <div class="filter-category-title">${traitType}</div>
-        <div class="filter-values">${valuesHtml}</div>
-      </div>
+  sortedTraitTypes.forEach((traitType) => {
+    const values = Object.entries(traitValueCounts[traitType])
+      .sort((a, b) => b[1] - a[1]) // Sort by frequency (most common first)
+      .map(([value]) => value);
+
+    const categoryDiv = document.createElement("div");
+    categoryDiv.className = "filter-category";
+    categoryDiv.dataset.trait = traitType;
+
+    const valuesHtml = values
+      .map((value) => createFilterValueHtml(traitType, value))
+      .join("");
+
+    categoryDiv.innerHTML = `
+      <div class="filter-category-title">${traitType}</div>
+      <div class="filter-values">${valuesHtml}</div>
     `;
-    })
-    .join("");
+
+    fragment.appendChild(categoryDiv);
+  });
+
+  container.innerHTML = "";
+  container.appendChild(fragment);
+}
+
+function createFilterValueHtml(traitType, value) {
+  const escapedType = traitType.replace(/'/g, "\\'");
+  const escapedValue = value.replace(/'/g, "\\'");
+  return `<span class="filter-value" onclick="addFilter('${escapedType}', '${escapedValue}')">${value}</span>`;
 }
 
 // Update results count display
@@ -246,9 +275,13 @@ function updateResultsCount(filtered, total) {
   }
 }
 
-// Display gallery items
+// Display gallery items with chunked rendering
 function displayGallery(items) {
   const gallery = document.getElementById("gallery");
+
+  // Cancel any ongoing rendering
+  renderQueue = [];
+  isRendering = false;
 
   if (items.length === 0) {
     gallery.innerHTML =
@@ -256,24 +289,94 @@ function displayGallery(items) {
     return;
   }
 
-  gallery.innerHTML = items.map((item) => createCardHTML(item)).join("");
+  // Clear gallery but keep reference
+  gallery.innerHTML = "";
 
-  // Set up lazy loading for newly added images
-  observeLazyImages();
+  // Use chunked rendering for large datasets
+  if (items.length > CHUNK_SIZE) {
+    renderChunks(gallery, items);
+  } else {
+    // Small datasets: render all at once
+    const fragment = document.createDocumentFragment();
+    items.forEach((item) => {
+      const card = createCardElement(item);
+      fragment.appendChild(card);
+    });
+    gallery.appendChild(fragment);
+    observeLazyImages();
+  }
+}
+
+// Create a card DOM element instead of HTML string
+function createCardElement(item) {
+  const div = document.createElement("div");
+  div.className = "svg-card";
+  div.setAttribute("data-id", item.name);
+  div.onclick = () => openItemModal(item.name);
+
+  div.innerHTML = `
+    <div class="svg-preview">
+      <img
+        class="lazy"
+        data-src="${item.image}"
+        alt="${item.name}"
+        src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%23f0f0f0' width='100' height='100'/%3E%3C/svg%3E"
+        loading="lazy"
+        decoding="async"
+      />
+    </div>
+    <div class="svg-info">
+      <div class="svg-id">${item.name}</div>
+    </div>
+  `;
+
+  return div;
+}
+
+// Render items in chunks using requestAnimationFrame
+function renderChunks(gallery, items) {
+  renderQueue = [...items];
+  isRendering = true;
+
+  let index = 0;
+
+  function renderNextChunk() {
+    if (!isRendering || index >= renderQueue.length) {
+      isRendering = false;
+      observeLazyImages();
+      return;
+    }
+
+    const chunk = renderQueue.slice(index, index + CHUNK_SIZE);
+    const fragment = document.createDocumentFragment();
+
+    chunk.forEach((item) => {
+      const card = createCardElement(item);
+      fragment.appendChild(card);
+    });
+
+    gallery.appendChild(fragment);
+
+    index += CHUNK_SIZE;
+
+    if (index < renderQueue.length) {
+      requestAnimationFrame(renderNextChunk);
+    } else {
+      isRendering = false;
+      observeLazyImages();
+    }
+  }
+
+  // Start rendering
+  requestAnimationFrame(renderNextChunk);
 }
 
 // Create card HTML with lazy loading
 function createCardHTML(item) {
   const id = item.name;
-  const traits = item.attributes
-    .map(
-      (attr) =>
-        `<span class="trait"><span class="trait-label">${attr.trait_type}:</span> ${attr.value}</span>`,
-    )
-    .join("");
 
   return `
-    <div class="svg-card" data-id="${id}">
+    <div class="svg-card" data-id="${id}" onclick="openItemModal('${id.replace(/'/g, "\\'")}')">
       <div class="svg-preview">
         <img
           class="lazy"
@@ -283,16 +386,7 @@ function createCardHTML(item) {
         />
       </div>
       <div class="svg-info">
-        <div class="traits-section">
-          <div class="traits-header" onclick="toggleTraits(this)">
-            <div class="svg-id">${item.name}</div>
-          </div>
-          <div class="svg-traits">${traits}</div>
-        </div>
-      </div>
-      <div class="svg-actions">
-        <button class="btn-download" onclick="downloadSVG('${id}', '${item.name}')">Download</button>
-        <button class="btn-claim" onclick="claim('${id}')">Claim</button>
+        <div class="svg-id">${item.name}</div>
       </div>
     </div>
   `;
@@ -319,45 +413,85 @@ function downloadSVG(id, name) {
   document.body.removeChild(link);
 
   URL.revokeObjectURL(url);
+
+  // Close modal after download
+  closeItemModal();
 }
 
-// Demo transaction tracker
-// document.querySelector("#demo-tx")?.addEventListener("click", async () => {
-//   if (!wallet.isConnected()) {
-//     Notification.show("Please connect your wallet first", "warning");
-//     return;
-//   }
+// Mint NFT function
+async function claim(itemName) {
+  const item = metadata.find((m) => m.name === itemName);
+  if (!item) return;
 
-//   try {
-//     const provider = wallet.getEthersProvider();
-//     const signer = await provider.getSigner();
+  if (!wallet.isConnected()) {
+    Notification.show("Please connect your wallet first", "warning");
+    return;
+  }
 
-//     // Demo transaction (send 0 ETH to self)
-//     const account = await wallet.getAccount();
-//     const tx = await signer.sendTransaction({
-//       to: account,
-//       value: 0,
-//     });
+  try {
+    const provider = wallet.getEthersProvider();
+    const signer = await provider.getSigner();
+    const account = await wallet.getAccount();
 
-//     Notification.track(tx, {
-//       label: "Demo Transaction",
-//     });
-//   } catch (error) {
-//     Notification.show("Transaction failed: " + error.message, "danger");
-//   }
-// });
-// Confirm claim (placeholder for integration)
-function claim() {
-  if (!currentClaimItem) return;
+    // Dummy mint transaction (sends 0 ETH to self to simulate minting)
+    // Replace this with your actual smart contract mint call:
+    // const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+    // const tx = await contract.mint(item.tokenId, { value: MINT_PRICE });
 
-  // This is where you would integrate with your smart contract
-  console.log("Claiming NFT:", currentClaimItem.name);
-  console.log("Metadata:", currentClaimItem);
+    const tx = await signer.sendTransaction({
+      to: account,
+      value: 0,
+    });
 
-  // Placeholder - show alert for now
-  alert(
-    `Claim initiated for ${currentClaimItem.name}!\n\nIntegrate your wallet connection and smart contract here.`,
-  );
+    Notification.track(tx, {
+      label: `Minting ${item.name}`,
+    });
+
+    console.log("Minting NFT:", item.name);
+    console.log("Metadata:", item);
+  } catch (error) {
+    Notification.show("Mint failed: " + error.message, "danger");
+    console.error("Mint error:", error);
+  }
+}
+
+// Open item modal with download/claim actions
+function openItemModal(itemName) {
+  const item = metadata.find((m) => m.name === itemName);
+  if (!item) return;
+
+  const modal = document.getElementById("item-modal");
+  const modalImg = document.getElementById("modal-img");
+  const modalTitle = document.getElementById("modal-title");
+  const modalTraits = document.getElementById("modal-traits");
+  const downloadBtn = document.getElementById("modal-download");
+  const claimBtn = document.getElementById("modal-claim");
+
+  modalImg.src = item.image;
+  modalTitle.textContent = item.name;
+
+  modalTraits.innerHTML = item.attributes
+    .map(
+      (attr) =>
+        `<div class="modal-trait"><span class="modal-trait-type">${attr.trait_type}:</span> ${attr.value}</div>`,
+    )
+    .join("");
+
+  downloadBtn.onclick = () => downloadSVG(itemName, itemName);
+  claimBtn.onclick = () => {
+    claim(itemName);
+    closeItemModal();
+  };
+
+  modal.classList.add("show");
+  document.body.style.overflow = "hidden";
+}
+
+// Close item modal
+function closeItemModal() {
+  const modal = document.getElementById("item-modal");
+  modal.classList.remove("show");
+  document.body.style.overflow = "";
 }
 
 // Setup event listeners
@@ -368,30 +502,6 @@ function setupEventListeners() {
   // claim button
   document.getElementById("confirm-claim-btn").addEventListener("click", claim);
 }
-
-// Toggle traits tooltip
-function toggleTraits(header) {
-  const tooltip = header.nextElementSibling;
-  const isVisible = tooltip.classList.contains("visible");
-
-  // Close all other tooltips first
-  document
-    .querySelectorAll(".svg-traits.visible")
-    .forEach((t) => t.classList.remove("visible"));
-
-  if (!isVisible) {
-    tooltip.classList.add("visible");
-  }
-}
-
-// Close tooltip when clicking outside
-document.addEventListener("click", (e) => {
-  if (!e.target.closest(".traits-section")) {
-    document
-      .querySelectorAll(".svg-traits.visible")
-      .forEach((t) => t.classList.remove("visible"));
-  }
-});
 
 document.addEventListener("DOMContentLoaded", () => {
   wallet.onConnect((data) => {
@@ -412,7 +522,7 @@ document.addEventListener("DOMContentLoaded", () => {
 window.toggleFilters = toggleFilters;
 window.addFilter = addFilter;
 window.removeFilter = removeFilter;
-window.toggleTraits = toggleTraits;
-
+window.openItemModal = openItemModal;
+window.closeItemModal = closeItemModal;
 window.downloadSVG = downloadSVG;
 window.claim = claim;

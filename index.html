@@ -123,6 +123,26 @@
     <!-- Notifications Container -->
     <div id="notificationContainer"></div>
 
+    <!-- Item Modal (Bottom Sheet) -->
+    <div id="item-modal" class="item-modal" onclick="closeItemModal()">
+      <div class="item-modal-content" onclick="event.stopPropagation()">
+        <button class="item-modal-close" onclick="closeItemModal()">&times;</button>
+        <div class="item-modal-body">
+          <div class="item-modal-image">
+            <img id="modal-img" src="" alt="">
+          </div>
+          <div class="item-modal-info">
+            <h3 id="modal-title"></h3>
+            <div id="modal-traits" class="modal-traits"></div>
+            <div class="item-modal-actions">
+              <button id="modal-download" class="btn-modal btn-download">Download SVG</button>
+              <button id="modal-claim" class="btn-modal btn-claim">Claim NFT</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script type="module" src="./js/main.js"></script>
   </body>
 </html>
