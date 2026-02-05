@@ -11,10 +11,6 @@ const CHUNK_SIZE = 100; // Items to render per chunk
 const LAZY_LOAD_ROOT_MARGIN = "100px";
 const LAZY_OBSERVER_BATCH_SIZE = 50;
 
-// TODO: Add your contract details here
-const CONTRACT_ADDRESS = "0x..."; // Your NFT contract address
-const CONTRACT_ABI = []; // Your contract ABI
-
 // =============================================================
 // STATE MANAGEMENT
 // =============================================================
@@ -26,7 +22,6 @@ const state = {
   renderQueue: [],
   isRendering: false,
   lazyLoadObserver: null,
-  claimedItems: new Set(), // Will be populated from blockchain
 };
 
 // =============================================================
@@ -61,115 +56,6 @@ async function loadMetadata() {
 function showError(message) {
   const gallery = document.getElementById("gallery");
   gallery.innerHTML = `<div class="empty-state"><p>${message}</p></div>`;
-}
-
-// =============================================================
-// BLOCKCHAIN CLAIM VERIFICATION
-// =============================================================
-
-/**
- * Check if a specific NFT is claimed by calling your smart contract
- * Replace this with your actual contract call
- */
-async function isClaimedOnChain(tokenId) {
-  try {
-    if (!wallet.isConnected()) {
-      return false;
-    }
-
-    const provider = wallet.getEthersProvider();
-    const contract = new ethers.Contract(
-      CONTRACT_ADDRESS,
-      CONTRACT_ABI,
-      provider,
-    );
-
-    // Example: Check if token exists (has been minted)
-    // Replace with your actual contract method
-    // const owner = await contract.ownerOf(tokenId);
-    // return owner !== ethers.ZeroAddress;
-
-    // OR if you have a specific "claimed" mapping:
-    // return await contract.isClaimed(tokenId);
-
-    // Temporary placeholder - returns false until you implement
-    return false;
-  } catch (error) {
-    // If token doesn't exist or error, it's not claimed
-    return false;
-  }
-}
-
-/**
- * Load all claimed NFTs from the blockchain
- * This will be called when wallet connects or page loads
- */
-async function loadClaimedFromBlockchain() {
-  if (!wallet.isConnected()) {
-    state.claimedItems.clear();
-    return;
-  }
-
-  try {
-    const provider = wallet.getEthersProvider();
-    const contract = new ethers.Contract(
-      CONTRACT_ADDRESS,
-      CONTRACT_ABI,
-      provider,
-    );
-
-    // Method 1: If you have a totalSupply() and can iterate
-    // const totalSupply = await contract.totalSupply();
-    // for (let i = 0; i < totalSupply; i++) {
-    //   const tokenId = await contract.tokenByIndex(i);
-    //   const metadata = state.metadata.find(m => m.tokenId === tokenId);
-    //   if (metadata) {
-    //     state.claimedItems.add(metadata.name);
-    //   }
-    // }
-
-    // Method 2: If you have a mapping of tokenId => claimed
-    // for (const item of state.metadata) {
-    //   const claimed = await contract.isClaimed(item.tokenId);
-    //   if (claimed) {
-    //     state.claimedItems.add(item.name);
-    //   }
-    // }
-
-    // Method 3: Query events for Mint/Claim events
-    // const filter = contract.filters.Claimed();
-    // const events = await contract.queryFilter(filter);
-    // events.forEach(event => {
-    //   const tokenId = event.args.tokenId;
-    //   const metadata = state.metadata.find(m => m.tokenId === tokenId);
-    //   if (metadata) {
-    //     state.claimedItems.add(metadata.name);
-    //   }
-    // });
-
-    console.log(
-      `Loaded ${state.claimedItems.size} claimed items from blockchain`,
-    );
-
-    // Refresh the gallery to show claimed badges
-    displayGallery(state.filteredMetadata);
-  } catch (error) {
-    console.error("Error loading claimed items from blockchain:", error);
-  }
-}
-
-/**
- * Check if an item is claimed (from our loaded state)
- */
-function isClaimed(itemName) {
-  return state.claimedItems.has(itemName);
-}
-
-/**
- * Mark an item as claimed (update local state only)
- */
-function markAsClaimed(itemName) {
-  state.claimedItems.add(itemName);
 }
 
 // =============================================================
@@ -492,10 +378,6 @@ function createCardElement(item) {
   const placeholderSvg =
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%23f0f0f0' width='100' height='100'/%3E%3C/svg%3E";
 
-  const claimedBadge = isClaimed(item.name)
-    ? '<span class="claimed-badge">CLAIMED</span>'
-    : "";
-
   div.innerHTML = `
     <div class="svg-preview">
       <img
@@ -508,7 +390,7 @@ function createCardElement(item) {
       />
     </div>
     <div class="svg-info">
-      <div class="svg-id">${item.name}${claimedBadge}</div>
+      <div class="svg-id">${item.name}</div>
     </div>
   `;
 
@@ -528,9 +410,6 @@ function openItemModal(itemName) {
   const modalTitle = document.getElementById("modal-title");
   const modalTraits = document.getElementById("modal-traits");
   const downloadBtn = document.getElementById("modal-download");
-  const claimBtn = document.getElementById("modal-claim");
-
-  const itemIsClaimed = isClaimed(itemName);
 
   modalImg.src = item.image;
   modalTitle.textContent = item.name;
@@ -547,16 +426,11 @@ function openItemModal(itemName) {
 
   downloadBtn.onclick = () => downloadSVG(item);
 
-  // Hide claim button if already claimed
-  if (itemIsClaimed) {
-    claimBtn.style.display = "none";
-  } else {
-    claimBtn.style.display = "";
-    claimBtn.onclick = () => {
-      claim(itemName);
-      closeItemModal();
-    };
-  }
+  const claimBtn = document.getElementById("modal-claim");
+  claimBtn.onclick = () => {
+    claim(itemName);
+    closeItemModal();
+  };
 
   modal.classList.add("show");
   document.body.style.overflow = "hidden";
@@ -602,18 +476,6 @@ async function claim(itemName) {
   try {
     const provider = wallet.getEthersProvider();
     const signer = await provider.getSigner();
-
-    // TODO: Replace with your actual smart contract mint call
-    const contract = new ethers.Contract(
-      CONTRACT_ADDRESS,
-      CONTRACT_ABI,
-      signer,
-    );
-
-    // Example mint call - adjust to your contract's method
-    // const tx = await contract.mint(item.tokenId, { value: ethers.parseEther("0.01") });
-
-    // Temporary placeholder transaction
     const account = await wallet.getAccount();
     const tx = await signer.sendTransaction({
       to: account,
@@ -621,25 +483,12 @@ async function claim(itemName) {
     });
 
     Notification.track(tx, {
-      label: `Minting ${item.name}`,
+      label: `Claiming ${item.name}`,
     });
 
-    // Wait for transaction confirmation
     await tx.wait();
-
-    // Mark as claimed after successful transaction
-    markAsClaimed(itemName);
-
-    // Refresh the gallery to show the claimed badge
-    displayGallery(state.filteredMetadata);
-
-    console.log("Minting NFT:", item.name);
-    console.log("Metadata:", item);
-
-    Notification.show(`Successfully claimed ${item.name}!`, "success");
   } catch (error) {
-    Notification.show("Mint failed: " + error.message, "danger");
-    console.error("Mint error:", error);
+    Notification.show("Claim failed: " + error.message, "danger");
   }
 }
 
@@ -659,17 +508,10 @@ function setupWalletListeners() {
       `Connected to ${wallet.getLastWallet()} account ${shortAccount}`,
       "success",
     );
-
-    // Load claimed items from blockchain when wallet connects
-    await loadClaimedFromBlockchain();
   });
 
   wallet.onDisconnect(() => {
     Notification.show("Wallet disconnected", "warning");
-
-    // Clear claimed items when wallet disconnects
-    state.claimedItems.clear();
-    displayGallery(state.filteredMetadata);
   });
 }
 
