@@ -961,6 +961,8 @@ h3 {
 @media (max-width: 768px) {
   h1 {
     font-size: 1.8rem;
+    text-wrap: wrap;
+    letter-spacing: 3px;
   }
 
   .available-filters {
@@ -984,6 +986,10 @@ h3 {
 }
 
 @media (max-width: 480px) {
+  h1 {
+    font-size: 1.5rem;
+    letter-spacing: 2px;
+  }
   .available-filters {
     column-count: 1;
   }
