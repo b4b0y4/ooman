@@ -447,8 +447,9 @@ function closeItemModal() {
 // =============================================================
 
 function downloadSVG(item) {
-  const base64Data = item.image.replace("data:image/svg+xml;base64,", "");
-  const svgData = atob(base64Data);
+  const svgData = decodeURIComponent(
+    item.image.replace("data:image/svg+xml;utf8,", ""),
+  );
 
   const blob = new Blob([svgData], { type: "image/svg+xml" });
   const url = URL.createObjectURL(blob);
