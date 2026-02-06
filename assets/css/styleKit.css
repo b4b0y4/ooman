@@ -110,7 +110,7 @@ h3 {
   height: 40px;
   padding: 7.5px 15px;
   cursor: pointer;
-  transition: all 0.3s ease-in-out;
+  transition: all 0.2s ease-in-out;
 }
 
 .connect-btn:hover {
@@ -214,8 +214,8 @@ h3 {
   transform: scale(0.9);
   pointer-events: none;
   transition:
-    opacity 0.3s ease-in-out,
-    transform 0.3s ease-in-out;
+    opacity 0.2s ease-in-out,
+    transform 0.2s ease-in-out;
 }
 
 .connect-modal.show {
@@ -235,7 +235,7 @@ h3 {
   height: 50px;
   margin: 2.5px 0;
   cursor: pointer;
-  transition: all 0.3s ease-in-out;
+  transition: all 0.2s ease-in-out;
   margin-bottom: 0;
 }
 
@@ -272,7 +272,7 @@ h3 {
   margin: 2.5px 0;
   white-space: nowrap;
   cursor: pointer;
-  transition: all 0.3s ease-in-out;
+  transition: all 0.2s ease-in-out;
 }
 
 .connect-wallet-list button:hover {
@@ -302,7 +302,7 @@ h3 {
   height: 50px;
   box-sizing: border-box;
   margin: 0;
-  transition: all 0.3s ease-in-out;
+  transition: all 0.2s ease-in-out;
 }
 
 .connect-chain-list:hover {
@@ -352,7 +352,7 @@ h3 {
   text-align: left;
   white-space: nowrap;
   overflow: hidden;
-  transition: all 0.3s ease-in-out;
+  transition: all 0.2s ease-in-out;
 }
 
 .connect-chain-list button.chain-single .connect-dot {
@@ -421,7 +421,7 @@ h3 {
 }
 
 .filters-toggle {
-  transition: transform 0.3s ease;
+  transition: transform 0.2s ease;
   font-size: 0.8rem;
   color: var(--color-hvr);
 }
@@ -432,7 +432,7 @@ h3 {
 
 .filters-content {
   padding: 0 20px 5px;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.2s ease;
 }
 
 .filters-content.collapsed {
@@ -567,7 +567,7 @@ h3 {
 
 .svg-preview img.lazy {
   opacity: 0;
-  transition: opacity 0.3s ease-in-out;
+  transition: opacity 0.2s ease-in-out;
 }
 
 .svg-preview img.loaded {
@@ -618,7 +618,7 @@ h3 {
   justify-content: center;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.3s ease-in-out;
+  transition: opacity 0.2s ease-in-out;
 }
 
 .item-modal.show {
@@ -635,7 +635,7 @@ h3 {
   max-height: 80vh;
   color: var(--color-txt);
   transform: translateY(100%);
-  transition: transform 0.3s ease-in-out;
+  transition: transform 0.2s ease-in-out;
   position: relative;
   overflow-y: auto;
 }
@@ -658,7 +658,7 @@ h3 {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.3s;
+  transition: background-color 0.2s;
 }
 
 .item-modal-close:hover {
@@ -731,7 +731,7 @@ h3 {
   font-family: inherit;
   font-size: 1.1em;
   font-weight: bold;
-  transition: all 0.3s;
+  transition: all 0.2s;
 }
 
 .btn-modal:hover {
@@ -754,7 +754,7 @@ h3 {
   justify-content: center;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.3s ease-in-out;
+  transition: opacity 0.2s ease-in-out;
 }
 
 .rpc-modal.show {
@@ -770,7 +770,7 @@ h3 {
   max-width: 500px;
   color: var(--color-txt);
   transform: scale(0.9);
-  transition: transform 0.3s ease-in-out;
+  transition: transform 0.2s ease-in-out;
 }
 
 .rpc-modal.show .rpc-modal-content {
@@ -786,7 +786,7 @@ h3 {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: background-color 0.2s;
 }
 
 .rpc-close-btn:hover {
@@ -832,7 +832,7 @@ h3 {
   cursor: pointer;
   font-size: 1.1em;
   font-weight: 500;
-  transition: all 0.3s;
+  transition: all 0.2s;
 }
 
 #save-rpc-btn:hover {
@@ -860,7 +860,7 @@ h3 {
   justify-content: center;
   color: var(--color-txt);
   opacity: 0.6;
-  transition: opacity 0.3s;
+  transition: opacity 0.2s;
 }
 
 #settings-btn:hover {
@@ -869,7 +869,7 @@ h3 {
 
 #settings-btn svg {
   opacity: 1;
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 #settings-btn.active svg {
@@ -893,7 +893,7 @@ h3 {
 [data-copy] svg {
   opacity: 0.6;
   transition:
-    opacity 0.3s,
+    opacity 0.2s,
     stroke 0.2s ease;
 }
 
@@ -931,7 +931,7 @@ h3 {
   position: relative;
   transform: translateX(-100%);
   opacity: 0;
-  transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   pointer-events: auto;
   max-width: 100%;
 }
@@ -993,7 +993,7 @@ h3 {
   align-items: center;
   justify-content: center;
   color: currentColor;
-  transition: background-color 0.3s;
+  transition: background-color 0.2s;
 }
 
 .notif-close:hover {
@@ -1093,7 +1093,7 @@ h3 {
 .tx-hash a {
   color: inherit;
   text-decoration: none;
-  transition: opacity 0.3s;
+  transition: opacity 0.2s;
 }
 
 .tx-hash a:hover {
