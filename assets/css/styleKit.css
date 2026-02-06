@@ -5,10 +5,10 @@
 :root {
   /* Colors */
   --color-bg: #0a0a0a;
-  --color-txt: #fff;
+  --color-txt: #ccc;
   --color-2: #1a1a1a;
   --color-3: #252525;
-  --color-hvr: #00d4ff;
+  --color-hvr: #64b5f6;
 
   /* Borders */
   --border: 1px solid #333;
@@ -78,22 +78,27 @@ h1 {
   text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
 }
 
-h1 .c1 {
+.c1 {
   color: #64b5f6;
 }
-h1 .c2 {
+
+.c2 {
   color: #81c784;
 }
-h1 .c3 {
+
+.c3 {
   color: #ff8a65;
 }
-h1 .c4 {
+
+.c4 {
   color: #d0589a;
 }
-h1 .c5 {
+
+.c5 {
   color: #7986cb;
 }
-h1 .c6 {
+
+.c6 {
   color: #ffcc80;
 }
 
@@ -102,7 +107,6 @@ h1 .space {
 }
 
 h3 {
-  color: var(--color-hvr);
   margin-bottom: 20px;
   font-size: 1.2rem;
 }
@@ -443,13 +447,11 @@ h3 {
 .filters-header h3 {
   margin: 0;
   font-size: 1rem;
-  color: var(--color-hvr);
 }
 
 .filters-toggle {
   transition: transform 0.2s ease;
   font-size: 0.8rem;
-  color: var(--color-hvr);
 }
 
 .filters-header.expanded .filters-toggle {
@@ -493,7 +495,7 @@ h3 {
 }
 
 .active-filter-tag:hover {
-  background: #ff3366;
+  background: #d0589a;
   color: var(--color-txt);
 }
 
@@ -543,7 +545,7 @@ h3 {
   padding: 4px 10px;
   background: var(--color-3);
   font-size: 0.75rem;
-  color: #ccc;
+  color: var(--color-txt);
   cursor: pointer;
   transition: all 0.2s;
   border: var(--border);
@@ -611,8 +613,7 @@ h3 {
   font-weight: bold;
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  gap: 2px;
 }
 
 .empty-state {
@@ -742,7 +743,7 @@ h3 {
 
 .modal-trait {
   font-size: 0.9rem;
-  color: #ccc;
+  color: var(--color-txt);
 }
 
 .modal-trait-type {
@@ -768,8 +769,13 @@ h3 {
   transition: all 0.2s;
 }
 
-.btn-modal:hover {
-  background-color: var(--color-hvr);
+.btn-download:hover {
+  background-color: #81c784;
+  color: var(--color-bg);
+}
+
+.btn-claim:hover {
+  background-color: #ffcc80;
   color: var(--color-bg);
 }
 
@@ -854,7 +860,7 @@ h3 {
 
 #rpc-inputs input:focus {
   outline: none;
-  border-color: var(--color-hvr);
+  border-color: #81c784;
 }
 
 #save-rpc-btn {
@@ -870,7 +876,7 @@ h3 {
 }
 
 #save-rpc-btn:hover {
-  background-color: var(--color-hvr);
+  background-color: #81c784;
   color: var(--color-bg);
 }
 

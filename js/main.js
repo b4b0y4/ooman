@@ -269,6 +269,16 @@ function buildFiltersFragment(sortedTraitTypes, traitValueCounts) {
   return fragment;
 }
 
+function colorizeText(text) {
+  return text
+    .split("")
+    .map((char, i) => {
+      if (char === "#") return '<span class="c6">#</span>';
+      return `<span class="c${(i % 6) + 1}">${char}</span>`;
+    })
+    .join("");
+}
+
 function createFilterCategory(traitType, values) {
   const categoryDiv = document.createElement("div");
   categoryDiv.className = "filter-category";
@@ -279,7 +289,7 @@ function createFilterCategory(traitType, values) {
     .join("");
 
   categoryDiv.innerHTML = `
-    <div class="filter-category-title">${traitType}</div>
+    <div class="filter-category-title">${colorizeText(traitType)}</div>
     <div class="filter-values">${valuesHtml}</div>
   `;
 
@@ -390,7 +400,7 @@ function createCardElement(item) {
       />
     </div>
     <div class="svg-info">
-      <div class="svg-id">${item.name}</div>
+      <div class="svg-id">${colorizeText(item.name)}</div>
     </div>
   `;
 
@@ -414,7 +424,7 @@ function openItemModal(itemName) {
 
   modalImg.src = item.image;
   if (modalImgMobile) modalImgMobile.src = item.image;
-  modalTitle.textContent = item.name;
+  modalTitle.innerHTML = colorizeText(item.name);
   modalTraits.innerHTML = item.attributes
     .map(
       (attr) => `

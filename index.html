@@ -51,8 +51,8 @@
   <body>
     <div class="container">
       <header>
-        <?xml version="1.0" encoding="utf-8"?>
-        <svg class="logo"
+        <svg
+          class="logo"
           xmlns="http://www.w3.org/2000/svg"
           width="64"
           height="64"
@@ -71,7 +71,6 @@
               />
             </mask>
           </defs>
-
           <g mask="url(#outer)">
             <rect x="0" y="0" width="21.3333" height="32" fill="#64b5f6" />
             <rect
@@ -105,7 +104,17 @@
             />
           </g>
         </svg>
-        <h1><span class="c1">O</span><span class="c2">o</span><span class="c3">m</span><span class="c4">a</span><span class="c5">n</span><span class="space"></span><span class="gallery-text"><span class="c6">G</span><span class="c1">a</span><span class="c2">l</span><span class="c3">l</span><span class="c4">e</span><span class="c5">r</span><span class="c6">y</span></span></h1>
+        <h1>
+          <span class="c1">O</span><span class="c2">o</span
+          ><span class="c3">m</span><span class="c4">a</span
+          ><span class="c5">n</span><span class="space"></span
+          ><span class="gallery-text"
+            ><span class="c6">G</span><span class="c1">a</span
+            ><span class="c2">l</span><span class="c3">l</span
+            ><span class="c4">e</span><span class="c5">r</span
+            ><span class="c6">y</span></span
+          >
+        </h1>
         <div class="wrapper">
           <!-- Settings Button -->
           <button id="settings-btn" aria-label="Settings" title="RPC Settings">
@@ -149,8 +158,13 @@
 
       <div class="filters-panel">
         <div class="filters-header" onclick="toggleFilters()">
-          <h3>Filters</h3>
-          <span class="filters-toggle">▼</span>
+          <h3>
+            <span class="c1">F</span><span class="c2">i</span
+            ><span class="c3">l</span><span class="c4">t</span
+            ><span class="c5">e</span><span class="c6">r</span
+            ><span class="c1">s</span>
+          </h3>
+          <span class="filters-toggle c2">▼</span>
         </div>
         <div class="filters-content collapsed">
           <span id="results-count" class="results-count"
