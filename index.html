@@ -51,7 +51,61 @@
   <body>
     <div class="container">
       <header>
-        <h1>Ooman Gallery</h1>
+        <?xml version="1.0" encoding="utf-8"?>
+        <svg class="logo"
+          xmlns="http://www.w3.org/2000/svg"
+          width="64"
+          height="64"
+          viewBox="0 0 64 64"
+        >
+          <defs>
+            <mask id="outer">
+              <rect
+                x="0"
+                y="0"
+                width="64"
+                height="64"
+                rx="8"
+                ry="8"
+                fill="white"
+              />
+            </mask>
+          </defs>
+
+          <g mask="url(#outer)">
+            <rect x="0" y="0" width="21.3333" height="32" fill="#64b5f6" />
+            <rect
+              x="21.3333"
+              y="0"
+              width="21.3333"
+              height="32"
+              fill="#81c784"
+            />
+            <rect
+              x="42.6666"
+              y="0"
+              width="21.3334"
+              height="32"
+              fill="#ff8a65"
+            />
+            <rect x="0" y="32" width="21.3333" height="32" fill="#D0589A" />
+            <rect
+              x="21.3333"
+              y="32"
+              width="21.3333"
+              height="32"
+              fill="#7986cb"
+            />
+            <rect
+              x="42.6666"
+              y="32"
+              width="21.3334"
+              height="32"
+              fill="#ffcc80"
+            />
+          </g>
+        </svg>
+        <h1><span class="c1">O</span><span class="c2">o</span><span class="c3">m</span><span class="c4">a</span><span class="c5">n</span><span class="space"></span><span class="gallery-text"><span class="c6">G</span><span class="c1">a</span><span class="c2">l</span><span class="c3">l</span><span class="c4">e</span><span class="c5">r</span><span class="c6">y</span></span></h1>
         <div class="wrapper">
           <!-- Settings Button -->
           <button id="settings-btn" aria-label="Settings" title="RPC Settings">

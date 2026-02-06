@@ -54,6 +54,10 @@ header {
   align-items: center;
 }
 
+header .logo {
+  margin-right: 10px;
+}
+
 .wrapper {
   display: flex;
   justify-content: end;
@@ -71,8 +75,30 @@ h1 {
   text-wrap: nowrap;
   text-transform: uppercase;
   letter-spacing: 5px;
-  color: var(--color-hvr);
   text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+}
+
+h1 .c1 {
+  color: #64b5f6;
+}
+h1 .c2 {
+  color: #81c784;
+}
+h1 .c3 {
+  color: #ff8a65;
+}
+h1 .c4 {
+  color: #d0589a;
+}
+h1 .c5 {
+  color: #7986cb;
+}
+h1 .c6 {
+  color: #ffcc80;
+}
+
+h1 .space {
+  margin-left: 10px;
 }
 
 h3 {
@@ -1123,8 +1149,11 @@ h3 {
 @media (max-width: 768px) {
   h1 {
     font-size: 1.8rem;
-    text-wrap: wrap;
     letter-spacing: 3px;
+  }
+
+  h1 .gallery-text {
+    display: none;
   }
 
   .available-filters {
