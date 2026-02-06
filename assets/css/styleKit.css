@@ -150,12 +150,9 @@ h3 {
 
 .connect-btn.connected {
   background-color: transparent;
+  color: var(--color-txt);
   padding: 7.5px 15px;
   gap: 8px;
-}
-
-.connect-btn.connected:hover {
-  color: inherit;
 }
 
 .connect-btn.ens-resolved {
