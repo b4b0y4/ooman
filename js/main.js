@@ -407,11 +407,13 @@ function openItemModal(itemName) {
 
   const modal = document.getElementById("item-modal");
   const modalImg = document.getElementById("modal-img");
+  const modalImgMobile = document.getElementById("modal-img-mobile");
   const modalTitle = document.getElementById("modal-title");
   const modalTraits = document.getElementById("modal-traits");
   const downloadBtn = document.getElementById("modal-download");
 
   modalImg.src = item.image;
+  if (modalImgMobile) modalImgMobile.src = item.image;
   modalTitle.textContent = item.name;
   modalTraits.innerHTML = item.attributes
     .map(

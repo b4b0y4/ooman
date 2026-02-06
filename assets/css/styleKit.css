@@ -732,6 +732,14 @@ h3 {
   margin-bottom: auto;
 }
 
+.modal-content-wrapper {
+  display: contents;
+}
+
+.item-modal-image-mobile {
+  display: none;
+}
+
 .modal-trait {
   font-size: 0.9rem;
   color: #ccc;
@@ -1176,15 +1184,17 @@ h3 {
   }
 
   .item-modal-body {
-    flex-direction: row;
-    align-items: flex-start;
-    text-align: left;
+    flex-direction: column;
     gap: 15px;
   }
 
   .item-modal-image {
-    width: 100px;
-    height: 100px;
+    display: none;
+  }
+
+  .item-modal-info {
+    display: flex;
+    flex-direction: column;
   }
 
   .item-modal-info h3 {
@@ -1192,10 +1202,35 @@ h3 {
     margin-bottom: 10px;
   }
 
+  .modal-content-wrapper {
+    display: flex;
+    gap: 5px;
+    align-items: flex-start;
+    margin-bottom: 15px;
+  }
+
   .modal-traits {
+    display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 4px 10px;
-    margin-bottom: 15px;
+    flex: 1;
+    margin-bottom: 0;
+  }
+
+  .item-modal-image-mobile {
+    display: block;
+    flex-shrink: 0;
+    width: 150px;
+    height: 150px;
+    background: var(--color-bg);
+    overflow: hidden;
+  }
+
+  .item-modal-image-mobile img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    image-rendering: pixelated;
   }
 
   .modal-trait {
@@ -1203,11 +1238,15 @@ h3 {
   }
 
   .item-modal-actions {
-    gap: 8px;
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    margin-top: auto;
   }
 
   .btn-modal {
-    padding: 8px;
+    flex: 1;
+    padding: 10px;
     font-size: 0.9em;
   }
 }
@@ -1250,16 +1289,6 @@ h3 {
 
   .item-modal-content {
     padding: 15px;
-  }
-
-  .item-modal-body {
-    flex-direction: row;
-    gap: 12px;
-  }
-
-  .item-modal-image {
-    width: 80px;
-    height: 80px;
   }
 
   .modal-traits {
