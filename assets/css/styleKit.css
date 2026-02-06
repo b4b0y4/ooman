@@ -730,7 +730,7 @@ h3 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px 20px;
-  margin-bottom: auto;
+  margin: auto 0;
 }
 
 .modal-content-wrapper {
@@ -1220,7 +1220,6 @@ h3 {
     grid-template-columns: repeat(2, 1fr);
     gap: 4px 10px;
     flex: 1;
-    margin-bottom: 0;
   }
 
   .item-modal-image-mobile {
