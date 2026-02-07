@@ -6,12 +6,12 @@ import { ConnectWallet, Notification, getRpcUrl } from "./libs/dappkit.js";
 // =============================================================
 
 const CONFIG = {
-  CHUNK_COUNT: 10,
-  CHUNK_PATTERN: "./data/Ooman_metadata_{i}.json",
-  INITIAL_CHUNKS: 1,
-  RENDER_CHUNK_SIZE: 100,
+  DATA_CHUNK_COUNT: 10,
+  DATA_CHUNK_PATTERN: "./data/Ooman_metadata_{i}.json",
+  INITIAL_DATA_CHUNKS: 1,
+  RENDER_BATCH_SIZE: 100,
   LAZY_ROOT_MARGIN: "100px",
-  LAZY_BATCH_SIZE: 50,
+  LAZY_LOAD_BATCH_SIZE: 50,
 };
 
 // =============================================================
@@ -23,6 +23,7 @@ const state = {
   filteredMetadata: [],
   activeFilters: [],
   lazyLoadObserver: null,
+  renderedCards: new Map(), // name -> DOM element
 };
 
 const wallet = new ConnectWallet();
@@ -42,8 +43,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 // =============================================================
 
 const getChunkFiles = () =>
-  Array.from({ length: CONFIG.CHUNK_COUNT }, (_, i) =>
-    CONFIG.CHUNK_PATTERN.replace("{i}", i + 1),
+  Array.from({ length: CONFIG.DATA_CHUNK_COUNT }, (_, i) =>
+    CONFIG.DATA_CHUNK_PATTERN.replace("{i}", i + 1),
   );
 
 const fetchChunk = async (file) => {
@@ -61,8 +62,8 @@ async function loadMetadata() {
   try {
     const files = getChunkFiles();
     const [initial, remaining] = [
-      files.slice(0, CONFIG.INITIAL_CHUNKS),
-      files.slice(CONFIG.INITIAL_CHUNKS),
+      files.slice(0, CONFIG.INITIAL_DATA_CHUNKS),
+      files.slice(CONFIG.INITIAL_DATA_CHUNKS),
     ];
 
     const results = await Promise.allSettled(initial.map(fetchChunk));
@@ -72,7 +73,6 @@ async function loadMetadata() {
 
     state.filteredMetadata = [...state.metadata];
 
-    // Initial render
     renderGallery(state.metadata);
     updateFilters();
     updateCount();
@@ -81,7 +81,6 @@ async function loadMetadata() {
       `Loaded ${state.metadata.length} items from ${initial.length} chunks`,
     );
 
-    // Background load remaining chunks
     deferExecution(() => loadBackground(remaining));
   } catch (error) {
     showError("Failed to load metadata. Please refresh.");
@@ -100,7 +99,7 @@ async function loadBackground(files) {
 
   worker.postMessage({
     files,
-    batchSize: 200, // tune this
+    batchSize: 200,
   });
 
   worker.onmessage = (e) => {
@@ -113,13 +112,11 @@ async function loadBackground(files) {
 
       if (state.activeFilters.length === 0) {
         state.filteredMetadata.push(...data);
-        // Only append every other batch to reduce DOM operations
         if (state.metadata.length % 400 === 0 || msg.final) {
           appendItems(data);
         }
       }
 
-      // Throttle filter updates - only update every 400 items
       if (state.metadata.length % 400 === 0) {
         updateFilters();
         updateCount();
@@ -159,14 +156,14 @@ function setupLazyLoading() {
 
 const observeLazyImages = () => {
   const images = document.querySelectorAll("img.lazy");
-  const batches = Math.ceil(images.length / CONFIG.LAZY_BATCH_SIZE);
+  const batches = Math.ceil(images.length / CONFIG.LAZY_LOAD_BATCH_SIZE);
 
   const observeBatch = (index) => {
     if (index >= batches) return;
-    const start = index * CONFIG.LAZY_BATCH_SIZE;
+    const start = index * CONFIG.LAZY_LOAD_BATCH_SIZE;
     const batch = Array.from(images).slice(
       start,
-      start + CONFIG.LAZY_BATCH_SIZE,
+      start + CONFIG.LAZY_LOAD_BATCH_SIZE,
     );
     batch.forEach((img) => state.lazyLoadObserver.observe(img));
     requestAnimationFrame(() => observeBatch(index + 1));
@@ -215,10 +212,23 @@ function removeFilter(traitType, value) {
 }
 
 function applyFilters() {
+  const hadFilters = state.filteredMetadata.length !== state.metadata.length;
+  const hasFiltersNow = state.activeFilters.length > 0;
+
   state.filteredMetadata =
     state.activeFilters.length === 0
       ? [...state.metadata]
       : state.metadata.filter(matchesAllFilters);
+
+  if (hadFilters && !hasFiltersNow && state.renderedCards.size > 0) {
+    state.renderedCards.forEach((card) => {
+      card.style.display = "";
+    });
+    updateActiveFiltersUI();
+    updateCount();
+    observeLazyImages();
+    return;
+  }
 
   renderGallery(state.filteredMetadata);
   updateActiveFiltersUI();
@@ -344,6 +354,7 @@ const createCard = (item) => {
       <div class="svg-id">${colorize(item.name)}</div>
     </div>
   `;
+  state.renderedCards.set(item.name, div);
   return div;
 };
 
@@ -362,15 +373,36 @@ function renderGallery(items) {
   if (items.length === 0) {
     gallery.innerHTML =
       '<div class="empty-state"><p>No items match the selected filters.</p></div>';
+    state.renderedCards.forEach((card) => {
+      card.style.display = "none";
+    });
     return;
   }
 
-  gallery.innerHTML = "";
+  if (state.renderedCards.size === 0 || gallery.querySelector(".empty-state")) {
+    gallery.innerHTML = "";
+  }
 
-  if (items.length <= CONFIG.RENDER_CHUNK_SIZE) {
-    appendItems(items);
+  const visibleNames = new Set(items.map((item) => item.name));
+
+  state.renderedCards.forEach((card, name) => {
+    if (visibleNames.has(name)) {
+      card.style.display = "";
+    } else {
+      card.style.display = "none";
+    }
+  });
+
+  const newItems = items.filter((item) => !state.renderedCards.has(item.name));
+
+  if (newItems.length > 0) {
+    if (newItems.length <= CONFIG.RENDER_BATCH_SIZE) {
+      appendItems(newItems);
+    } else {
+      renderChunked(newItems);
+    }
   } else {
-    renderChunked(items);
+    observeLazyImages();
   }
 }
 
@@ -384,12 +416,12 @@ function renderChunked(items) {
       return;
     }
 
-    const chunk = items.slice(index, index + CONFIG.RENDER_CHUNK_SIZE);
+    const chunk = items.slice(index, index + CONFIG.RENDER_BATCH_SIZE);
     const fragment = document.createDocumentFragment();
     chunk.forEach((item) => fragment.appendChild(createCard(item)));
     gallery.appendChild(fragment);
 
-    index += CONFIG.RENDER_CHUNK_SIZE;
+    index += CONFIG.RENDER_BATCH_SIZE;
     requestAnimationFrame(renderNext);
   };
 
