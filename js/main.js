@@ -1,39 +1,39 @@
 import { ethers } from "./libs/ethers.min.js";
 import { ConnectWallet, Notification, getRpcUrl } from "./dappkit.js";
 
-const wallet = new ConnectWallet();
-
 // =============================================================
-// CONSTANTS & CONFIGURATION
+// CONFIG
 // =============================================================
 
-const CHUNK_SIZE = 100; // Items to render per chunk
-const LAZY_LOAD_ROOT_MARGIN = "100px";
-const LAZY_OBSERVER_BATCH_SIZE = 50;
+const CONFIG = {
+  CHUNK_COUNT: 10,
+  CHUNK_PATTERN: "Ooman_metadata_{i}.json",
+  INITIAL_CHUNKS: 1,
+  RENDER_CHUNK_SIZE: 100,
+  LAZY_ROOT_MARGIN: "100px",
+  LAZY_BATCH_SIZE: 50,
+};
 
 // =============================================================
-// STATE MANAGEMENT
+// STATE
 // =============================================================
 
 const state = {
   metadata: [],
   filteredMetadata: [],
   activeFilters: [],
-  renderQueue: [],
-  isRendering: false,
   lazyLoadObserver: null,
 };
 
+const wallet = new ConnectWallet();
+
 // =============================================================
-// INITIALIZATION
+// INIT
 // =============================================================
 
 document.addEventListener("DOMContentLoaded", async () => {
-  await loadMetadata();
   setupLazyLoading();
-  displayGallery(state.metadata);
-  populateAvailableFilters();
-  setupEventListeners();
+  await loadMetadata();
   setupWalletListeners();
 });
 
@@ -41,97 +41,150 @@ document.addEventListener("DOMContentLoaded", async () => {
 // DATA LOADING
 // =============================================================
 
+const getChunkFiles = () =>
+  Array.from({ length: CONFIG.CHUNK_COUNT }, (_, i) =>
+    CONFIG.CHUNK_PATTERN.replace("{i}", i + 1),
+  );
+
+const fetchChunk = async (file) => {
+  const res = await fetch(file);
+  if (!res.ok) throw new Error(`Failed to load ${file}`);
+  return res.json();
+};
+
+const deferExecution = (fn) =>
+  "requestIdleCallback" in window
+    ? requestIdleCallback(fn, { timeout: 2000 })
+    : setTimeout(fn, 100);
+
+const yieldToMain = () =>
+  new Promise((resolve) =>
+    "requestIdleCallback" in window
+      ? requestIdleCallback(resolve, { timeout: 1000 })
+      : requestAnimationFrame(resolve),
+  );
+
 async function loadMetadata() {
   try {
-    const response = await fetch("Ooman_metadata.json");
-    state.metadata = await response.json();
+    const files = getChunkFiles();
+    const [initial, remaining] = [
+      files.slice(0, CONFIG.INITIAL_CHUNKS),
+      files.slice(CONFIG.INITIAL_CHUNKS),
+    ];
+
+    const results = await Promise.allSettled(initial.map(fetchChunk));
+    state.metadata = results
+      .filter((r) => r.status === "fulfilled")
+      .flatMap((r) => r.value);
+
     state.filteredMetadata = [...state.metadata];
-    console.log(`Loaded ${state.metadata.length} items`);
+
+    // Initial render
+    renderGallery(state.metadata);
+    updateFilters();
+    updateCount();
+
+    console.log(
+      `Loaded ${state.metadata.length} items from ${initial.length} chunks`,
+    );
+
+    // Background load remaining chunks
+    deferExecution(() => loadBackground(remaining));
   } catch (error) {
-    console.error("Error loading metadata:", error);
-    showError("Error loading metadata. Please check console.");
+    showError("Failed to load metadata. Please refresh.");
+    console.error(error);
   }
 }
 
-function showError(message) {
-  const gallery = document.getElementById("gallery");
-  gallery.innerHTML = `<div class="empty-state"><p>${message}</p></div>`;
+async function loadBackground(files) {
+  console.log(`Background loading ${files.length} chunks...`);
+
+  for (const file of files) {
+    try {
+      const data = await fetchChunk(file);
+      state.metadata.push(...data);
+
+      if (state.activeFilters.length === 0) {
+        state.filteredMetadata.push(...data);
+        appendItems(data);
+      }
+
+      updateFilters();
+      console.log(`Loaded ${file} (total: ${state.metadata.length})`);
+      await yieldToMain();
+    } catch (err) {
+      console.warn(`Failed to load ${file}:`, err);
+    }
+  }
 }
 
 // =============================================================
-// LAZY LOADING SYSTEM
+// LAZY LOADING
 // =============================================================
 
 function setupLazyLoading() {
-  const options = {
-    root: null,
-    rootMargin: LAZY_LOAD_ROOT_MARGIN,
-    threshold: 0,
-  };
-
-  state.lazyLoadObserver = new IntersectionObserver((entries, observer) => {
-    entries.forEach((entry) => {
-      if (entry.isIntersecting) {
-        loadImage(entry.target, observer);
-      }
-    });
-  }, options);
+  state.lazyLoadObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const img = entry.target;
+          img.src = img.dataset.src;
+          img.classList.replace("lazy", "loaded");
+          state.lazyLoadObserver.unobserve(img);
+        }
+      });
+    },
+    { rootMargin: CONFIG.LAZY_ROOT_MARGIN, threshold: 0 },
+  );
 }
 
-function loadImage(img, observer) {
-  const src = img.dataset.src;
-  if (!src) return;
+const observeLazyImages = () => {
+  const images = document.querySelectorAll("img.lazy");
+  const batches = Math.ceil(images.length / CONFIG.LAZY_BATCH_SIZE);
 
-  img.src = src;
-  img.removeAttribute("data-src");
-  img.classList.remove("lazy");
-  img.classList.add("loaded");
-  observer.unobserve(img);
-}
-
-function observeLazyImages() {
-  if (!state.lazyLoadObserver) return;
-
-  const lazyImages = document.querySelectorAll("img.lazy");
-  let index = 0;
-
-  function observeBatch() {
-    const batch = Array.from(lazyImages).slice(
-      index,
-      index + LAZY_OBSERVER_BATCH_SIZE,
+  const observeBatch = (index) => {
+    if (index >= batches) return;
+    const start = index * CONFIG.LAZY_BATCH_SIZE;
+    const batch = Array.from(images).slice(
+      start,
+      start + CONFIG.LAZY_BATCH_SIZE,
     );
     batch.forEach((img) => state.lazyLoadObserver.observe(img));
+    requestAnimationFrame(() => observeBatch(index + 1));
+  };
 
-    index += LAZY_OBSERVER_BATCH_SIZE;
-    if (index < lazyImages.length) {
-      requestAnimationFrame(observeBatch);
-    }
-  }
-
-  observeBatch();
-}
+  observeBatch(0);
+};
 
 // =============================================================
-// FILTER MANAGEMENT
+// FILTERS
 // =============================================================
+
+const matchesFilter = (item, filter) =>
+  item.attributes.some(
+    (attr) =>
+      attr.trait_type === filter.trait_type && attr.value === filter.value,
+  );
+
+const matchesAllFilters = (item) =>
+  state.activeFilters.every((filter) => matchesFilter(item, filter));
 
 function toggleFilters() {
   const content = document.querySelector(".filters-content");
   const header = document.querySelector(".filters-header");
-  const isCollapsed = content.classList.contains("collapsed");
-
-  content.classList.toggle("collapsed", !isCollapsed);
-  header.classList.toggle("expanded", isCollapsed);
+  content.classList.toggle("collapsed");
+  header.classList.toggle("expanded");
 }
 
 function addFilter(traitType, value) {
-  const exists = state.activeFilters.some(
-    (f) => f.trait_type === traitType && f.value === value,
-  );
-  if (exists) return;
-
-  state.activeFilters.push({ trait_type: traitType, value: value });
-  updateActiveFiltersDisplay();
+  if (
+    state.activeFilters.some(
+      (f) => f.trait_type === traitType && f.value === value,
+    )
+  ) {
+    return;
+  }
+  state.activeFilters.push({ trait_type: traitType, value });
   applyFilters();
 }
 
@@ -139,78 +192,69 @@ function removeFilter(traitType, value) {
   state.activeFilters = state.activeFilters.filter(
     (f) => !(f.trait_type === traitType && f.value === value),
   );
-  updateActiveFiltersDisplay();
   applyFilters();
 }
 
-function updateActiveFiltersDisplay() {
+function applyFilters() {
+  state.filteredMetadata =
+    state.activeFilters.length === 0
+      ? [...state.metadata]
+      : state.metadata.filter(matchesAllFilters);
+
+  renderGallery(state.filteredMetadata);
+  updateActiveFiltersUI();
+  updateCount();
+}
+
+function updateActiveFiltersUI() {
   const container = document.getElementById("active-filters");
   if (!container) return;
 
-  if (state.activeFilters.length === 0) {
-    container.innerHTML = '<span class="no-filters">No active filters</span>';
-    return;
-  }
-
-  container.innerHTML = state.activeFilters
-    .map((filter) => createActiveFilterTag(filter))
-    .join("");
+  container.innerHTML =
+    state.activeFilters.length === 0
+      ? '<span class="no-filters">No active filters</span>'
+      : state.activeFilters
+          .map(
+            (f) => `
+            <span class="active-filter-tag" onclick="removeFilter('${f.trait_type}', '${f.value}')">
+              ${f.trait_type}: ${f.value}
+              <span class="remove-icon">×</span>
+            </span>
+          `,
+          )
+          .join("");
 }
 
-function createActiveFilterTag(filter) {
-  return `
-    <span class="active-filter-tag" onclick="removeFilter('${filter.trait_type}', '${filter.value}')">
-      ${filter.trait_type}: ${filter.value}
-      <span class="remove-icon">×</span>
-    </span>
-  `;
-}
-
-function applyFilters() {
-  if (state.activeFilters.length === 0) {
-    state.filteredMetadata = [...state.metadata];
-  } else {
-    state.filteredMetadata = state.metadata.filter((item) =>
-      state.activeFilters.every((filter) =>
-        item.attributes
-          .filter((attr) => attr.trait_type === filter.trait_type)
-          .some((attr) => attr.value === filter.value),
-      ),
-    );
-  }
-
-  displayGallery(state.filteredMetadata);
-  updateResultsCount(state.filteredMetadata.length, state.metadata.length);
-}
-
-function populateAvailableFilters() {
-  const container = document.getElementById("available-filters");
-  if (!container || state.metadata.length === 0) return;
-
-  const traitValueCounts = buildTraitValueCounts();
-  removeRedundantTraits(traitValueCounts);
-
-  const sortedTraitTypes = sortTraitTypes(Object.keys(traitValueCounts));
-  const fragment = buildFiltersFragment(sortedTraitTypes, traitValueCounts);
-
-  container.innerHTML = "";
-  container.appendChild(fragment);
-}
-
-function buildTraitValueCounts() {
-  const counts = {};
+function updateFilters() {
+  const traits = {};
 
   state.metadata.forEach((item) => {
     item.attributes.forEach((attr) => {
-      if (!counts[attr.trait_type]) {
-        counts[attr.trait_type] = {};
+      if (!traits[attr.trait_type]) traits[attr.trait_type] = {};
+      if (!traits[attr.trait_type][attr.value]) {
+        traits[attr.trait_type][attr.value] = 0;
       }
-      counts[attr.trait_type][attr.value] =
-        (counts[attr.trait_type][attr.value] || 0) + 1;
+      traits[attr.trait_type][attr.value]++;
     });
   });
 
-  return counts;
+  removeRedundantTraits(traits);
+
+  const container = document.getElementById("available-filters");
+
+  const sortedTraits = Object.keys(traits);
+  const fragment = document.createDocumentFragment();
+
+  sortedTraits.forEach((traitType) => {
+    const values = Object.entries(traits[traitType])
+      .sort((a, b) => b[1] - a[1])
+      .map(([value]) => value);
+
+    fragment.appendChild(createFilterCategoryElement(traitType, values));
+  });
+
+  container.innerHTML = "";
+  container.appendChild(fragment);
 }
 
 function removeRedundantTraits(traitValueCounts) {
@@ -231,95 +275,70 @@ function removeRedundantTraits(traitValueCounts) {
   });
 }
 
-function sortTraitTypes(traitTypes) {
-  const traitOrder = [
-    "Background",
-    "Type",
-    "Skin",
-    "Head",
-    "Eyes",
-    "Mouth",
-    "Facial Hair",
-    "Earring",
-    "Necklace",
-  ];
-
-  return traitTypes.sort((a, b) => {
-    const indexA = traitOrder.indexOf(a);
-    const indexB = traitOrder.indexOf(b);
-    return (
-      (indexA === -1 ? traitOrder.length : indexA) -
-      (indexB === -1 ? traitOrder.length : indexB)
-    );
-  });
-}
-
-function buildFiltersFragment(sortedTraitTypes, traitValueCounts) {
-  const fragment = document.createDocumentFragment();
-
-  sortedTraitTypes.forEach((traitType) => {
-    const values = Object.entries(traitValueCounts[traitType])
-      .sort((a, b) => b[1] - a[1])
-      .map(([value]) => value);
-
-    const categoryDiv = createFilterCategory(traitType, values);
-    fragment.appendChild(categoryDiv);
-  });
-
-  return fragment;
-}
-
-function colorizeText(text) {
-  return text
+const colorize = (text) =>
+  text
     .split("")
-    .map((char, i) => {
-      if (char === "#") return '<span class="c6"> #</span>';
-      return `<span class="c${(i % 6) + 1}">${char}</span>`;
-    })
+    .map((char, i) =>
+      char === "#"
+        ? '<span class="c6"> #</span>'
+        : `<span class="c${(i % 6) + 1}">${char}</span>`,
+    )
     .join("");
-}
 
-function createFilterCategory(traitType, values) {
-  const categoryDiv = document.createElement("div");
-  categoryDiv.className = "filter-category";
-  categoryDiv.dataset.trait = traitType;
+function createFilterCategoryElement(traitType, values) {
+  const div = document.createElement("div");
+  div.className = "filter-category";
+  div.dataset.trait = traitType;
 
   const valuesHtml = values
-    .map((value) => createFilterValueHtml(traitType, value))
+    .map(
+      (value) =>
+        `<span class="filter-value" onclick="addFilter('${traitType}', '${value}')">${value}</span>`,
+    )
     .join("");
 
-  categoryDiv.innerHTML = `
-    <div class="filter-category-title">${colorizeText(traitType)}</div>
+  div.innerHTML = `
+    <div class="filter-category-title">${colorize(traitType)}</div>
     <div class="filter-values">${valuesHtml}</div>
   `;
 
-  return categoryDiv;
-}
-
-function createFilterValueHtml(traitType, value) {
-  return `<span class="filter-value" onclick="addFilter('${traitType}', '${value}')">${value}</span>`;
-}
-
-function updateResultsCount(filtered, total) {
-  const countEl = document.getElementById("results-count");
-  if (!countEl) return;
-
-  countEl.textContent =
-    filtered === total
-      ? `Showing all ${total} items`
-      : `Showing ${filtered} of ${total} items`;
+  return div;
 }
 
 // =============================================================
 // GALLERY RENDERING
 // =============================================================
 
-function displayGallery(items) {
-  const gallery = document.getElementById("gallery");
+const placeholder =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%23f0f0f0' width='100' height='100'/%3E%3C/svg%3E";
 
-  // Cancel ongoing rendering
-  state.renderQueue = [];
-  state.isRendering = false;
+const createCard = (item) => {
+  const div = document.createElement("div");
+  div.className = "svg-card";
+  div.dataset.id = item.name;
+  div.onclick = () => openModal(item.name);
+  div.innerHTML = `
+    <div class="svg-preview">
+      <img class="lazy" data-src="${item.image}" alt="${item.name}" src="${placeholder}" loading="lazy" decoding="async" />
+    </div>
+    <div class="svg-info">
+      <div class="svg-id">${colorize(item.name)}</div>
+    </div>
+  `;
+  return div;
+};
+
+function appendItems(items) {
+  const gallery = document.getElementById("gallery");
+  const fragment = document.createDocumentFragment();
+  items.forEach((item) => fragment.appendChild(createCard(item)));
+  gallery.appendChild(fragment);
+  observeLazyImages();
+  updateCount();
+}
+
+function renderGallery(items) {
+  const gallery = document.getElementById("gallery");
 
   if (items.length === 0) {
     gallery.innerHTML =
@@ -329,103 +348,67 @@ function displayGallery(items) {
 
   gallery.innerHTML = "";
 
-  if (items.length > CHUNK_SIZE) {
-    renderChunks(gallery, items);
+  if (items.length <= CONFIG.RENDER_CHUNK_SIZE) {
+    appendItems(items);
   } else {
-    renderAll(gallery, items);
+    renderChunked(items);
   }
 }
 
-function renderAll(gallery, items) {
-  const fragment = document.createDocumentFragment();
-  items.forEach((item) => {
-    fragment.appendChild(createCardElement(item));
-  });
-  gallery.appendChild(fragment);
-  observeLazyImages();
-}
-
-function renderChunks(gallery, items) {
-  state.renderQueue = [...items];
-  state.isRendering = true;
-
+function renderChunked(items) {
+  const gallery = document.getElementById("gallery");
   let index = 0;
 
-  function renderNextChunk() {
-    if (!state.isRendering || index >= state.renderQueue.length) {
-      state.isRendering = false;
+  const renderNext = () => {
+    if (index >= items.length) {
       observeLazyImages();
       return;
     }
 
-    const chunk = state.renderQueue.slice(index, index + CHUNK_SIZE);
+    const chunk = items.slice(index, index + CONFIG.RENDER_CHUNK_SIZE);
     const fragment = document.createDocumentFragment();
-
-    chunk.forEach((item) => {
-      fragment.appendChild(createCardElement(item));
-    });
-
+    chunk.forEach((item) => fragment.appendChild(createCard(item)));
     gallery.appendChild(fragment);
-    index += CHUNK_SIZE;
 
-    if (index < state.renderQueue.length) {
-      requestAnimationFrame(renderNextChunk);
-    } else {
-      state.isRendering = false;
-      observeLazyImages();
-    }
-  }
+    index += CONFIG.RENDER_CHUNK_SIZE;
+    requestAnimationFrame(renderNext);
+  };
 
-  requestAnimationFrame(renderNextChunk);
+  renderNext();
 }
 
-function createCardElement(item) {
-  const div = document.createElement("div");
-  div.className = "svg-card";
-  div.setAttribute("data-id", item.name);
-  div.onclick = () => openItemModal(item.name);
+const updateCount = () => {
+  const el = document.getElementById("results-count");
+  if (!el) return;
+  const { length: filtered } = state.filteredMetadata;
+  const { length: total } = state.metadata;
+  el.textContent =
+    filtered === total
+      ? `Showing all ${total} items`
+      : `Showing ${filtered} of ${total} items`;
+};
 
-  const placeholderSvg =
-    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%23f0f0f0' width='100' height='100'/%3E%3C/svg%3E";
-
-  div.innerHTML = `
-    <div class="svg-preview">
-      <img
-        class="lazy"
-        data-src="${item.image}"
-        alt="${item.name}"
-        src="${placeholderSvg}"
-        loading="lazy"
-        decoding="async"
-      />
-    </div>
-    <div class="svg-info">
-      <div class="svg-id">${colorizeText(item.name)}</div>
-    </div>
-  `;
-
-  return div;
-}
+const showError = (msg) => {
+  document.getElementById("gallery").innerHTML =
+    `<div class="empty-state"><p>${msg}</p></div>`;
+};
 
 // =============================================================
-// MODAL MANAGEMENT
+// MODAL
 // =============================================================
 
-function openItemModal(itemName) {
+function openModal(itemName) {
   const item = state.metadata.find((m) => m.name === itemName);
   if (!item) return;
 
   const modal = document.getElementById("item-modal");
-  const modalImg = document.getElementById("modal-img");
-  const modalImgMobile = document.getElementById("modal-img-mobile");
-  const modalTitle = document.getElementById("modal-title");
-  const modalTraits = document.getElementById("modal-traits");
-  const downloadBtn = document.getElementById("modal-download");
 
-  modalImg.src = item.image;
-  if (modalImgMobile) modalImgMobile.src = item.image;
-  modalTitle.innerHTML = colorizeText(item.name);
-  modalTraits.innerHTML = item.attributes
+  document.getElementById("modal-img").src = item.image;
+  const mobilImg = document.getElementById("modal-img-mobile");
+  if (mobilImg) mobilImg.src = item.image;
+
+  document.getElementById("modal-title").innerHTML = colorize(item.name);
+  document.getElementById("modal-traits").innerHTML = item.attributes
     .map(
       (attr) => `
       <div class="modal-trait">
@@ -436,45 +419,39 @@ function openItemModal(itemName) {
     )
     .join("");
 
-  downloadBtn.onclick = () => downloadSVG(item);
-
-  const claimBtn = document.getElementById("modal-claim");
-  claimBtn.onclick = () => {
+  document.getElementById("modal-download").onclick = () => download(item);
+  document.getElementById("modal-claim").onclick = () => {
     claim(itemName);
-    closeItemModal();
+    closeModal();
   };
 
   modal.classList.add("show");
   document.body.style.overflow = "hidden";
 }
 
-function closeItemModal() {
-  const modal = document.getElementById("item-modal");
-  modal.classList.remove("show");
+const closeModal = () => {
+  document.getElementById("item-modal").classList.remove("show");
   document.body.style.overflow = "";
-}
+};
 
 // =============================================================
 // DOWNLOAD & CLAIM
 // =============================================================
 
-function downloadSVG(item) {
+function download(item) {
   const svgData = decodeURIComponent(
     item.image.replace("data:image/svg+xml;utf8,", ""),
   );
-
   const blob = new Blob([svgData], { type: "image/svg+xml" });
   const url = URL.createObjectURL(blob);
 
   const link = document.createElement("a");
   link.href = url;
   link.download = `${item.name.replace(/\s+/g, "")}.svg`;
-  document.body.appendChild(link);
   link.click();
-  document.body.removeChild(link);
 
   URL.revokeObjectURL(url);
-  closeItemModal();
+  closeModal();
 }
 
 async function claim(itemName) {
@@ -490,26 +467,19 @@ async function claim(itemName) {
     const provider = wallet.getEthersProvider();
     const signer = await provider.getSigner();
     const account = await wallet.getAccount();
-    const tx = await signer.sendTransaction({
-      to: account,
-      value: 0,
-    });
-
-    Notification.track(tx, {
-      label: `Claiming ${item.name}`,
-    });
+    const tx = await signer.sendTransaction({ to: account, value: 0 });
+    Notification.track(tx, { label: `Claiming ${item.name}` });
   } catch (error) {
-    Notification.show("Claim failed: " + error.message.split('(')[0].trim(), "danger");
+    Notification.show(
+      "Claim failed: " + error.message.split("(")[0].trim(),
+      "danger",
+    );
   }
 }
 
 // =============================================================
-// EVENT LISTENERS
+// WALLET
 // =============================================================
-
-function setupEventListeners() {
-  updateActiveFiltersDisplay();
-}
 
 function setupWalletListeners() {
   wallet.onConnect(async (data) => {
@@ -527,13 +497,15 @@ function setupWalletListeners() {
 }
 
 // =============================================================
-// GLOBAL EXPORTS (for onclick handlers)
+// EXPORTS
 // =============================================================
 
-window.toggleFilters = toggleFilters;
-window.addFilter = addFilter;
-window.removeFilter = removeFilter;
-window.openItemModal = openItemModal;
-window.closeItemModal = closeItemModal;
-window.downloadSVG = downloadSVG;
-window.claim = claim;
+Object.assign(window, {
+  toggleFilters,
+  addFilter,
+  removeFilter,
+  openItemModal: openModal,
+  closeItemModal: closeModal,
+  downloadSVG: download,
+  claim,
+});
