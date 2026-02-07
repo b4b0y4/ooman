@@ -66,32 +66,42 @@ window.onclick = (e) => {
 
 function populateRpcInputs() {
   rpcInputs.innerHTML = "";
-  const network = "ethereum";
-  const networkConfig = networkConfigs[network];
 
-  const div = document.createElement("div");
-  const label = document.createElement("label");
-  label.innerText = networkConfig.name;
-  const input = document.createElement("input");
-  input.id = `${network}-rpc`;
-  input.placeholder = "Enter custom RPC URL";
-  const customRpc = localStorage.getItem(`${network}-rpc`);
-  if (customRpc) {
-    input.value = customRpc;
-  }
-  div.appendChild(label);
-  div.appendChild(input);
-  rpcInputs.appendChild(div);
+  const networksToShow = Object.entries(networkConfigs).filter(
+    ([, config]) => config.showInUI
+  );
+
+  networksToShow.forEach(([network, networkConfig]) => {
+    const div = document.createElement("div");
+    const label = document.createElement("label");
+    label.innerText = networkConfig.name;
+    const input = document.createElement("input");
+    input.id = `${network}-rpc`;
+    input.placeholder = "Enter custom RPC URL";
+    const customRpc = localStorage.getItem(`${network}-rpc`);
+    if (customRpc) {
+      input.value = customRpc;
+    }
+    div.appendChild(label);
+    div.appendChild(input);
+    rpcInputs.appendChild(div);
+  });
 }
 
 saveRpcBtn.onclick = function () {
-  const network = "ethereum";
-  const input = document.getElementById(`${network}-rpc`);
-  if (input.value) {
-    localStorage.setItem(`${network}-rpc`, input.value);
-  } else {
-    localStorage.removeItem(`${network}-rpc`);
-  }
+  const networksToShow = Object.entries(networkConfigs).filter(
+    ([, config]) => config.showInUI
+  );
+
+  networksToShow.forEach(([network]) => {
+    const input = document.getElementById(`${network}-rpc`);
+    if (input && input.value) {
+      localStorage.setItem(`${network}-rpc`, input.value);
+    } else if (input) {
+      localStorage.removeItem(`${network}-rpc`);
+    }
+  });
+
   toggleModal(false);
 };
 
