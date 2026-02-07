@@ -580,7 +580,7 @@ h3 {
 .svg-preview {
   width: 100%;
   aspect-ratio: 1;
-  background: var(--color-bg);
+  background: var(--color-2);
   display: flex;
   align-items: center;
   justify-content: center;
