@@ -234,7 +234,7 @@ h3 {
   right: 0;
   margin-top: 10px;
   min-width: 180px;
-  background-color: var(--color-bg);
+  background-color: var(--color-2);
   border: var(--border);
   padding: 5px;
   opacity: 0;
@@ -257,7 +257,7 @@ h3 {
   font-size: 1em;
   border: none;
   color: var(--color-txt);
-  background-color: var(--color-2);
+  background-color: var(--color-3);
   width: 100%;
   height: 50px;
   margin: 2.5px 0;
@@ -267,7 +267,7 @@ h3 {
 }
 
 .connect-get-wallet:hover {
-  background-color: var(--color-hvr);
+  background-color: #7986cb;
 }
 
 .connect-get-wallet a {
@@ -292,7 +292,7 @@ h3 {
   font-size: 1em;
   border: none;
   color: var(--color-txt);
-  background-color: var(--color-2);
+  background-color: var(--color-3);
   width: 100%;
   height: 50px;
   padding: 7.5px 40px 7.5px 7.5px;
@@ -303,7 +303,7 @@ h3 {
 }
 
 .connect-wallet-list button:hover {
-  background-color: var(--color-hvr);
+  background-color: #7986cb;
   color: var(--color-bg);
 }
 
@@ -324,7 +324,7 @@ h3 {
   align-items: center;
   justify-content: space-around;
   padding: 7.5px;
-  background-color: var(--color-2);
+  background-color: var(--color-3);
   max-width: 100%;
   height: 50px;
   box-sizing: border-box;
@@ -333,7 +333,7 @@ h3 {
 }
 
 .connect-chain-list:hover {
-  background-color: var(--color-hvr);
+  background-color: #7986cb;
 }
 
 .connect-chain-list:hover .connect-name {
@@ -651,7 +651,7 @@ h3 {
 }
 
 .item-modal-content {
-  background-color: var(--color-bg);
+  background-color: var(--color-2);
   border: var(--border);
   padding: 20px;
   width: 100%;
@@ -699,7 +699,6 @@ h3 {
   flex-shrink: 0;
   width: 200px;
   height: 200px;
-  background: var(--color-bg);
   overflow: hidden;
 }
 
@@ -800,7 +799,7 @@ h3 {
 }
 
 .rpc-modal-content {
-  background-color: var(--color-bg);
+  background-color: var(--color-2);
   padding: 20px;
   border: var(--border);
   width: 90%;
@@ -827,7 +826,7 @@ h3 {
 }
 
 .rpc-close-btn:hover {
-  background-color: var(--color-2);
+  background-color: var(--color-3);
 }
 
 #rpc-inputs {
@@ -849,8 +848,8 @@ h3 {
 
 #rpc-inputs input {
   padding: 7.5px 15px;
-  border: 1px solid var(--color-2);
-  background-color: var(--color-bg);
+  border: var(--border);
+  background-color: var(--color-2);
   color: var(--color-txt);
   font-size: 1em;
 }
@@ -863,7 +862,7 @@ h3 {
 #save-rpc-btn {
   width: 100%;
   padding: 10px;
-  background-color: var(--color-2);
+  background-color: var(--color-3);
   color: var(--color-txt);
   border: none;
   cursor: pointer;
