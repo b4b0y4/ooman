@@ -1,5 +1,5 @@
 import { ethers } from "./libs/ethers.min.js";
-import { ConnectWallet, Notification, getRpcUrl } from "./dappkit.js";
+import { ConnectWallet, Notification, getRpcUrl } from "./libs/dappkit.js";
 
 // =============================================================
 // CONFIG
@@ -7,11 +7,16 @@ import { ConnectWallet, Notification, getRpcUrl } from "./dappkit.js";
 
 const CONFIG = {
   CHUNK_COUNT: 10,
-  CHUNK_PATTERN: "Ooman_metadata_{i}.json",
+  CHUNK_PATTERN: "data/Ooman_metadata_{i}.json",
   INITIAL_CHUNKS: 1,
   RENDER_CHUNK_SIZE: 100,
   LAZY_ROOT_MARGIN: "100px",
   LAZY_BATCH_SIZE: 50,
+};
+
+const isSafari = () => {
+  const ua = navigator.userAgent;
+  return /Safari/.test(ua) && !/Chrome|Chromium|Edg/.test(ua);
 };
 
 // =============================================================
@@ -97,25 +102,45 @@ async function loadMetadata() {
 }
 
 async function loadBackground(files) {
-  console.log(`Background loading ${files.length} chunks...`);
+  if (!files.length || !window.Worker) return;
 
-  for (const file of files) {
-    try {
-      const data = await fetchChunk(file);
+  console.log("Using worker loader (universal)");
+
+  const worker = new Worker("./js/workers/metadata.worker.js", {
+    type: "module",
+  });
+
+  worker.postMessage({
+    files,
+    batchSize: 50, // tune this
+  });
+
+  worker.onmessage = (e) => {
+    const msg = e.data;
+
+    if (msg.type === "batch") {
+      const data = msg.data;
+
       state.metadata.push(...data);
 
       if (state.activeFilters.length === 0) {
         state.filteredMetadata.push(...data);
-        appendItems(data);
+        appendItems(data); // progressive UI
       }
 
       updateFilters();
-      console.log(`Loaded ${file} (total: ${state.metadata.length})`);
-      await yieldToMain();
-    } catch (err) {
-      console.warn(`Failed to load ${file}:`, err);
+      updateCount();
     }
-  }
+
+    if (msg.type === "error") {
+      console.warn("Worker chunk failed:", msg.file, msg.error);
+    }
+
+    if (msg.type === "done") {
+      console.log("Worker loading complete");
+      worker.terminate();
+    }
+  };
 }
 
 // =============================================================

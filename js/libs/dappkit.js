@@ -1,4 +1,4 @@
-import { ethers } from "./libs/ethers.min.js";
+import { ethers } from "./ethers.min.js";
 
 // START networkConfigs.js
 export const networkConfigs = {
@@ -11,33 +11,6 @@ export const networkConfigs = {
     explorerUrl: "https://etherscan.io/tx/",
     showInUI: true,
   },
-  // arbitrum: {
-  //   name: "Arbitrum",
-  //   rpcUrl: "https://1rpc.io/arb",
-  //   chainId: 42161,
-  //   chainIdHex: "0xa4b1",
-  //   icon: "./assets/img/arb.png",
-  //   explorerUrl: "https://arbiscan.io/tx/",
-  //   showInUI: true,
-  // },
-  // optimism: {
-  //   name: "Optimism",
-  //   rpcUrl: "https://mainnet.optimism.io",
-  //   chainId: 10,
-  //   chainIdHex: "0xa",
-  //   icon: "./assets/img/op.png",
-  //   explorerUrl: "https://optimistic.etherscan.io/tx/",
-  //   showInUI: true,
-  // },
-  // base: {
-  //   name: "Base",
-  //   rpcUrl: "https://base-rpc.publicnode.com",
-  //   chainId: 8453,
-  //   chainIdHex: "0x2105",
-  //   icon: "./assets/img/base.png",
-  //   explorerUrl: "https://basescan.org/tx/",
-  //   showInUI: true,
-  // },
 };
 // END networkConfigs.js
 
@@ -68,7 +41,7 @@ function populateRpcInputs() {
   rpcInputs.innerHTML = "";
 
   const networksToShow = Object.entries(networkConfigs).filter(
-    ([, config]) => config.showInUI
+    ([, config]) => config.showInUI,
   );
 
   networksToShow.forEach(([network, networkConfig]) => {
@@ -90,7 +63,7 @@ function populateRpcInputs() {
 
 saveRpcBtn.onclick = function () {
   const networksToShow = Object.entries(networkConfigs).filter(
-    ([, config]) => config.showInUI
+    ([, config]) => config.showInUI,
   );
 
   networksToShow.forEach(([network]) => {
