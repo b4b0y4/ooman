@@ -273,7 +273,7 @@ function colorizeText(text) {
   return text
     .split("")
     .map((char, i) => {
-      if (char === "#") return '<span class="c6">#</span>';
+      if (char === "#") return '<span class="c6"> #</span>';
       return `<span class="c${(i % 6) + 1}">${char}</span>`;
     })
     .join("");

@@ -144,7 +144,7 @@ h3 {
 }
 
 .connect-btn:hover {
-  background-color: var(--color-hvr);
+  background-color: #7986cb;
   color: var(--color-bg);
 }
 
@@ -510,8 +510,8 @@ h3 {
 /* Available Filters */
 .available-filters {
   column-count: 4;
-  column-gap: 15px;
-  margin-bottom: 15px;
+  column-gap: 10px;
+  margin-bottom: 5px;
 }
 
 .filter-category {
@@ -519,7 +519,9 @@ h3 {
   padding: 12px;
   border: var(--border);
   break-inside: avoid;
-  margin-bottom: 15px;
+  margin-bottom: 10px;
+  display: inline-block;
+  width: 100%;
 }
 
 .filter-category-title {
@@ -607,10 +609,9 @@ h3 {
 .svg-id {
   font-size: 0.85rem;
   color: var(--color-hvr);
+  display: inline;
   font-weight: bold;
-  display: flex;
   align-items: center;
-  gap: 2px;
 }
 
 .empty-state {
@@ -1152,7 +1153,7 @@ h3 {
 
 @media (max-width: 992px) {
   .available-filters {
-    column-count: 3;
+    column-count: 2;
   }
 }
 
@@ -1168,11 +1169,6 @@ h3 {
 
   .available-filters {
     column-count: 2;
-    column-gap: 10px;
-  }
-
-  .filter-category {
-    margin-bottom: 10px;
   }
 
   .filter-actions {
