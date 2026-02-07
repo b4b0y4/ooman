@@ -10,13 +10,10 @@ self.onmessage = async (e) => {
 
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${file}`);
 
-      // Parse directly without intermediate text step
       const data = await res.json();
 
-      // Use spread instead of loop for better performance
       buffer.push(...data);
 
-      // Send in larger batches
       if (buffer.length >= batchSize) {
         self.postMessage({
           type: "batch",
