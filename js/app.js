@@ -7,16 +7,11 @@ import { ConnectWallet, Notification, getRpcUrl } from "./libs/dappkit.js";
 
 const CONFIG = {
   CHUNK_COUNT: 10,
-  CHUNK_PATTERN: "data/Ooman_metadata_{i}.json",
+  CHUNK_PATTERN: "./data/Ooman_metadata_{i}.json",
   INITIAL_CHUNKS: 1,
   RENDER_CHUNK_SIZE: 100,
   LAZY_ROOT_MARGIN: "100px",
   LAZY_BATCH_SIZE: 50,
-};
-
-const isSafari = () => {
-  const ua = navigator.userAgent;
-  return /Safari/.test(ua) && !/Chrome|Chromium|Edg/.test(ua);
 };
 
 // =============================================================
@@ -62,13 +57,6 @@ const deferExecution = (fn) =>
     ? requestIdleCallback(fn, { timeout: 2000 })
     : setTimeout(fn, 100);
 
-const yieldToMain = () =>
-  new Promise((resolve) =>
-    "requestIdleCallback" in window
-      ? requestIdleCallback(resolve, { timeout: 1000 })
-      : requestAnimationFrame(resolve),
-  );
-
 async function loadMetadata() {
   try {
     const files = getChunkFiles();
@@ -106,13 +94,13 @@ async function loadBackground(files) {
 
   console.log("Using worker loader (universal)");
 
-  const worker = new Worker("./js/workers/metadata.worker.js", {
+  const worker = new Worker("./js/workers/metadata_worker.js", {
     type: "module",
   });
 
   worker.postMessage({
     files,
-    batchSize: 50, // tune this
+    batchSize: 200, // tune this
   });
 
   worker.onmessage = (e) => {
@@ -125,11 +113,17 @@ async function loadBackground(files) {
 
       if (state.activeFilters.length === 0) {
         state.filteredMetadata.push(...data);
-        appendItems(data); // progressive UI
+        // Only append every other batch to reduce DOM operations
+        if (state.metadata.length % 400 === 0 || msg.final) {
+          appendItems(data);
+        }
       }
 
-      updateFilters();
-      updateCount();
+      // Throttle filter updates - only update every 400 items
+      if (state.metadata.length % 400 === 0) {
+        updateFilters();
+        updateCount();
+      }
     }
 
     if (msg.type === "error") {
