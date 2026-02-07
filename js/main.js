@@ -499,7 +499,7 @@ async function claim(itemName) {
       label: `Claiming ${item.name}`,
     });
   } catch (error) {
-    Notification.show("Claim failed: " + error.message, "danger");
+    Notification.show("Claim failed: " + error.message.split('(')[0].trim(), "danger");
   }
 }
 
