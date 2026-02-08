@@ -212,23 +212,10 @@ function removeFilter(traitType, value) {
 }
 
 function applyFilters() {
-  const hadFilters = state.filteredMetadata.length !== state.metadata.length;
-  const hasFiltersNow = state.activeFilters.length > 0;
-
   state.filteredMetadata =
     state.activeFilters.length === 0
       ? [...state.metadata]
       : state.metadata.filter(matchesAllFilters);
-
-  if (hadFilters && !hasFiltersNow && state.renderedCards.size > 0) {
-    state.renderedCards.forEach((card) => {
-      card.style.display = "";
-    });
-    updateActiveFiltersUI();
-    updateCount();
-    observeLazyImages();
-    return;
-  }
 
   renderGallery(state.filteredMetadata);
   updateActiveFiltersUI();
@@ -369,22 +356,7 @@ function appendItems(items) {
 
 function renderGallery(items) {
   const gallery = document.getElementById("gallery");
-
-  if (items.length === 0) {
-    gallery.innerHTML =
-      '<div class="empty-state"><p>No items match the selected filters.</p></div>';
-    state.renderedCards.forEach((card) => {
-      card.style.display = "none";
-    });
-    return;
-  }
-
-  if (state.renderedCards.size === 0 || gallery.querySelector(".empty-state")) {
-    gallery.innerHTML = "";
-  }
-
   const visibleNames = new Set(items.map((item) => item.name));
-
   state.renderedCards.forEach((card, name) => {
     if (visibleNames.has(name)) {
       card.style.display = "";
@@ -392,6 +364,18 @@ function renderGallery(items) {
       card.style.display = "none";
     }
   });
+
+  let emptyState = gallery.querySelector(".empty-state");
+  if (items.length === 0) {
+    if (!emptyState) {
+      emptyState = document.createElement("div");
+      emptyState.className = "empty-state";
+      emptyState.innerHTML = "<p>No items match the selected filters.</p>";
+      gallery.appendChild(emptyState);
+    }
+  } else if (emptyState) {
+    emptyState.remove();
+  }
 
   const newItems = items.filter((item) => !state.renderedCards.has(item.name));
 
