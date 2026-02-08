@@ -254,8 +254,6 @@ function updateFilters() {
     });
   });
 
-  removeRedundantTraits(traits);
-
   const container = document.getElementById("available-filters");
 
   const sortedTraits = Object.keys(traits);
@@ -271,24 +269,6 @@ function updateFilters() {
 
   container.innerHTML = "";
   container.appendChild(fragment);
-}
-
-function removeRedundantTraits(traitValueCounts) {
-  if (!traitValueCounts["Type"]) return;
-
-  const typeValuesLower = new Set(
-    Object.keys(traitValueCounts["Type"]).map((v) => v.toLowerCase()),
-  );
-
-  ["Skin", "Eyes"].forEach((trait) => {
-    if (traitValueCounts[trait]) {
-      Object.keys(traitValueCounts[trait]).forEach((value) => {
-        if (typeValuesLower.has(value.toLowerCase())) {
-          delete traitValueCounts[trait][value];
-        }
-      });
-    }
-  });
 }
 
 const colorize = (text) =>
