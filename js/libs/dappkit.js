@@ -1,6 +1,29 @@
 import { ethers } from "./ethers.min.js";
 
-// START networkConfigs.js
+// ============================================================
+// CONSTANTS & CONFIGURATION
+// ============================================================
+
+const STORAGE_KEYS = {
+  CHAIN_ID: "connectCurrentChainId",
+  LAST_WALLET: "connectLastWallet",
+  IS_CONNECTED: "connectConnected",
+};
+
+const TIMINGS = {
+  NOTIFICATION_DURATION: 5000,
+  NOTIFICATION_HIDE_DELAY: 400,
+  TRANSACTION_REMOVE_DELAY: 5000,
+  COPY_FEEDBACK_DURATION: 2000,
+};
+
+const COPY_ICONS = {
+  copy: `<svg class="copy-icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`,
+  success: '<polyline points="20 6 9 17 4 12"/>',
+  error:
+    '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+};
+
 export const networkConfigs = {
   ethereum: {
     name: "Ethereum",
@@ -12,97 +35,157 @@ export const networkConfigs = {
     showInUI: true,
   },
 };
-// END networkConfigs.js
 
-// START rpcModal.js
+// ============================================================
+// HELPER FUNCTIONS
+// ============================================================
+
+function normalizeChainId(chainId) {
+  if (typeof chainId === "string" && chainId.startsWith("0x")) {
+    return parseInt(chainId, 16);
+  }
+  return Number(chainId);
+}
+
+function shortenAddress(address, startChars = 5, endChars = 4) {
+  if (!address) return "";
+  return `${address.substring(0, startChars)}...${address.substring(address.length - endChars)}`;
+}
+
+function shortenHash(hash, startChars = 6, endChars = 4) {
+  if (!hash) return "";
+  return `${hash.substring(0, startChars)}...${hash.substring(hash.length - endChars)}`;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function getVisibleNetworks() {
+  return Object.entries(networkConfigs).filter(([, config]) => config.showInUI);
+}
+
+function getNetworkByChainId(chainId) {
+  const normalized = normalizeChainId(chainId);
+  return Object.values(networkConfigs).find(
+    (net) => net.chainId === normalized || net.chainIdHex === chainId,
+  );
+}
+
+export function getRpcUrl(network) {
+  const customRpc = localStorage.getItem(`${network}-rpc`);
+  return customRpc || networkConfigs[network].rpcUrl;
+}
+
+// ============================================================
+// RPC MODAL
+// ============================================================
+
 const rpcModal = document.getElementById("rpc-modal");
-const settingsBtn = document.getElementById("settings-btn");
 const rpcCloseBtn = document.getElementsByClassName("rpc-close-btn")[0];
 const rpcInputs = document.getElementById("rpc-inputs");
 const saveRpcBtn = document.getElementById("save-rpc-btn");
 
-function toggleModal(show) {
-  rpcModal.classList.toggle("show", show);
-  settingsBtn.classList.toggle("active", show);
+function toggleRpcModal(show) {
+  rpcModal?.classList.toggle("show", show);
 }
 
-settingsBtn.onclick = () => {
-  populateRpcInputs();
-  toggleModal(true);
-};
-
-rpcCloseBtn.onclick = () => toggleModal(false);
-
-window.onclick = (e) => {
-  if (e.target === rpcModal) toggleModal(false);
-};
-
 function populateRpcInputs() {
+  if (!rpcInputs) return;
+
   rpcInputs.innerHTML = "";
 
-  const networksToShow = Object.entries(networkConfigs).filter(
-    ([, config]) => config.showInUI,
-  );
-
-  networksToShow.forEach(([network, networkConfig]) => {
+  getVisibleNetworks().forEach(([network, networkConfig]) => {
     const div = document.createElement("div");
     const label = document.createElement("label");
     label.innerText = networkConfig.name;
+
     const input = document.createElement("input");
     input.id = `${network}-rpc`;
     input.placeholder = "Enter custom RPC URL";
+
     const customRpc = localStorage.getItem(`${network}-rpc`);
-    if (customRpc) {
-      input.value = customRpc;
-    }
+    if (customRpc) input.value = customRpc;
+
     div.appendChild(label);
     div.appendChild(input);
     rpcInputs.appendChild(div);
   });
 }
 
-saveRpcBtn.onclick = function () {
-  const networksToShow = Object.entries(networkConfigs).filter(
-    ([, config]) => config.showInUI,
-  );
-
-  networksToShow.forEach(([network]) => {
+function saveRpcSettings() {
+  getVisibleNetworks().forEach(([network]) => {
     const input = document.getElementById(`${network}-rpc`);
-    if (input && input.value) {
+    if (!input) return;
+
+    if (input.value) {
       localStorage.setItem(`${network}-rpc`, input.value);
-    } else if (input) {
+    } else {
       localStorage.removeItem(`${network}-rpc`);
     }
   });
 
-  toggleModal(false);
-};
-
-export function getRpcUrl(network) {
-  const customRpc = localStorage.getItem(`${network}-rpc`);
-  return customRpc || networkConfigs[network].rpcUrl;
+  toggleRpcModal(false);
 }
-// END rpcModal.js
 
-// START copy.js
+// Event Listeners
+rpcCloseBtn?.addEventListener("click", () => toggleRpcModal(false));
+saveRpcBtn?.addEventListener("click", saveRpcSettings);
+
+window.addEventListener("click", (e) => {
+  if (e.target === rpcModal) toggleRpcModal(false);
+});
+
+// ============================================================
+// COPY TO CLIPBOARD
+// ============================================================
+
 class Copy {
   static initialized = false;
   static elements = new WeakSet();
-  static icon = `<svg class="copy-icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
-  static successIcon = '<polyline points="20 6 9 17 4 12"/>';
-  static errorIcon =
-    '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>';
 
   static init() {
     if (this.initialized) return;
     this.initialized = true;
 
     document.addEventListener("click", this.handleClick.bind(this), true);
+    this.setupObserver();
+    this.enhanceAll();
+  }
 
-    this.observer = new MutationObserver(this.handleMutations.bind(this));
+  static setupObserver() {
+    this.observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType !== 1) return;
+
+          if (node.matches?.("[data-copy]")) this.enhance(node);
+          node
+            .querySelectorAll?.("[data-copy]")
+            ?.forEach((el) => this.enhance(el));
+        });
+      });
+    });
+
     this.observer.observe(document.body, { childList: true, subtree: true });
+  }
 
+  static enhanceAll() {
     document.querySelectorAll("[data-copy]").forEach((el) => this.enhance(el));
+  }
+
+  static enhance(el) {
+    if (this.elements.has(el)) return;
+
+    el.title ||= "Click to copy";
+
+    if (!el.querySelector(".copy-icon-svg")) {
+      el.insertAdjacentHTML("beforeend", COPY_ICONS.copy);
+    }
+
+    this.elements.add(el);
   }
 
   static handleClick(e) {
@@ -116,46 +199,19 @@ class Copy {
     this.copy(text, el);
   }
 
-  static handleMutations(mutations) {
-    for (const mutation of mutations) {
-      for (const node of mutation.addedNodes) {
-        if (node.nodeType !== 1) continue;
-
-        if (node.matches?.("[data-copy]")) {
-          this.enhance(node);
-        }
-        node
-          .querySelectorAll?.("[data-copy]")
-          ?.forEach((el) => this.enhance(el));
-      }
-    }
-  }
-
-  static enhance(el) {
-    if (this.elements.has(el)) return;
-
-    el.title ||= "Click to copy";
-
-    if (!el.querySelector(".copy-icon-svg")) {
-      el.insertAdjacentHTML("beforeend", this.icon);
-    }
-
-    this.elements.add(el);
-  }
-
   static async copy(text, el) {
     try {
       await navigator.clipboard.writeText(text);
-      this.feedback(el, true);
+      this.showFeedback(el, true);
       return true;
     } catch (err) {
       console.warn("Copy failed:", err);
-      this.feedback(el, false);
+      this.showFeedback(el, false);
       return false;
     }
   }
 
-  static feedback(el, success) {
+  static showFeedback(el, success) {
     if (!el) return;
 
     const svg = el.querySelector("svg");
@@ -164,7 +220,7 @@ class Copy {
     const prevInner = svg.innerHTML;
     const prevTitle = el.title;
 
-    svg.innerHTML = success ? this.successIcon : this.errorIcon;
+    svg.innerHTML = success ? COPY_ICONS.success : COPY_ICONS.error;
     el.title = success ? "Copied!" : "Copy failed";
     el.classList.add(success ? "copy-success" : "copy-error");
 
@@ -172,7 +228,7 @@ class Copy {
       svg.innerHTML = prevInner;
       el.title = prevTitle || "Click to copy";
       el.classList.remove("copy-success", "copy-error");
-    }, 2000);
+    }, TIMINGS.COPY_FEEDBACK_DURATION);
   }
 
   static destroy() {
@@ -181,14 +237,17 @@ class Copy {
   }
 }
 
+// Initialize Copy
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => Copy.init());
 } else {
   Copy.init();
 }
-// END copy.js
 
-// START notifications.js
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+
 export class Notification {
   static container = null;
   static notifications = new Map();
@@ -214,7 +273,7 @@ export class Notification {
     this.init();
 
     const config = {
-      duration: 5000,
+      duration: TIMINGS.NOTIFICATION_DURATION,
       closable: true,
       showProgress: true,
       html: false,
@@ -231,10 +290,7 @@ export class Notification {
     });
 
     this.container.appendChild(notification);
-
-    requestAnimationFrame(() => {
-      notification.classList.add("show");
-    });
+    requestAnimationFrame(() => notification.classList.add("show"));
 
     if (config.duration > 0) {
       this.scheduleHide(id, config.duration);
@@ -248,7 +304,7 @@ export class Notification {
     notification.className = `notification ${type}`;
     notification.setAttribute("data-id", id);
 
-    const safeMessage = config.html ? message : this.escapeHtml(message);
+    const safeMessage = config.html ? message : escapeHtml(message);
 
     notification.innerHTML = `
       <div class="notif-content">
@@ -278,15 +334,12 @@ export class Notification {
       onSuccess: null,
       onError: null,
       autoRemove: true,
-      removeDelay: 5000,
+      removeDelay: TIMINGS.TRANSACTION_REMOVE_DELAY,
       ...options,
     };
 
     const id = tx.hash;
-
-    if (this.transactions.has(id)) {
-      return id;
-    }
+    if (this.transactions.has(id)) return id;
 
     const txElement = this.createTransaction(
       id,
@@ -303,10 +356,7 @@ export class Notification {
       tx,
     });
 
-    requestAnimationFrame(() => {
-      txElement.classList.add("show");
-    });
-
+    requestAnimationFrame(() => txElement.classList.add("show"));
     this.watchTransaction(id, config);
 
     return id;
@@ -317,7 +367,6 @@ export class Notification {
     tx.className = "notification tx-notification pending";
     tx.setAttribute("data-id", id);
 
-    const shortHash = `${txHash.substring(0, 6)}...${txHash.substring(txHash.length - 4)}`;
     const explorerUrl = this.getExplorerUrl(txHash, chainId);
 
     tx.innerHTML = `
@@ -326,9 +375,9 @@ export class Notification {
           <div class="tx-spinner"></div>
         </div>
         <div class="tx-details">
-          <div class="tx-label">${this.escapeHtml(config.label)}</div>
+          <div class="tx-label">${escapeHtml(config.label)}</div>
           <div class="tx-hash">
-            <a href="${explorerUrl}" target="_blank" rel="noopener noreferrer">${shortHash}</a>
+            <a href="${explorerUrl}" target="_blank" rel="noopener noreferrer">${shortenHash(txHash)}</a>
           </div>
         </div>
         <div class="tx-status">Pending</div>
@@ -336,9 +385,9 @@ export class Notification {
       </div>
     `;
 
-    tx.querySelector(".notif-close").addEventListener("click", () => {
-      this.removeTransaction(id);
-    });
+    tx.querySelector(".notif-close").addEventListener("click", () =>
+      this.removeTransaction(id),
+    );
 
     return tx;
   }
@@ -347,12 +396,9 @@ export class Notification {
     const network = Object.values(networkConfigs).find(
       (net) => net.chainId === chainId,
     );
-
-    if (network?.explorerUrl) {
-      return `${network.explorerUrl}${txHash}`;
-    }
-
-    return `https://etherscan.io/tx/${txHash}`;
+    return network?.explorerUrl
+      ? `${network.explorerUrl}${txHash}`
+      : `https://etherscan.io/tx/${txHash}`;
   }
 
   static async watchTransaction(id, config) {
@@ -360,24 +406,17 @@ export class Notification {
     if (!txData) return;
 
     try {
-      if (config.onPending) {
-        config.onPending(txData.tx.hash);
-      }
+      config.onPending?.(txData.tx.hash);
 
       const receipt = await txData.tx.wait();
-
       if (!this.transactions.has(id)) return;
 
       if (receipt.status === 1) {
         this.updateTransactionStatus(id, "success", "Confirmed");
-        if (config.onSuccess) {
-          config.onSuccess(receipt);
-        }
+        config.onSuccess?.(receipt);
       } else {
         this.updateTransactionStatus(id, "failed", "Failed");
-        if (config.onError) {
-          config.onError(new Error("Transaction failed"));
-        }
+        config.onError?.(new Error("Transaction failed"));
       }
 
       if (config.autoRemove) {
@@ -387,9 +426,7 @@ export class Notification {
       if (!this.transactions.has(id)) return;
 
       this.updateTransactionStatus(id, "failed", "Failed");
-      if (config.onError) {
-        config.onError(error);
-      }
+      config.onError?.(error);
 
       if (config.autoRemove) {
         setTimeout(() => this.removeTransaction(id), config.removeDelay);
@@ -406,14 +443,10 @@ export class Notification {
     txData.element.classList.add(status);
 
     const statusEl = txData.element.querySelector(".tx-status");
-    if (statusEl) {
-      statusEl.textContent = statusText;
-    }
+    if (statusEl) statusEl.textContent = statusText;
 
     const spinner = txData.element.querySelector(".tx-spinner");
-    if (spinner && status !== "pending") {
-      spinner.remove();
-    }
+    if (spinner && status !== "pending") spinner.remove();
   }
 
   static removeTransaction(id) {
@@ -425,7 +458,7 @@ export class Notification {
     setTimeout(() => {
       txData.element?.parentNode?.removeChild(txData.element);
       this.transactions.delete(id);
-    }, 400);
+    }, TIMINGS.NOTIFICATION_HIDE_DELAY);
   }
 
   static hide(id) {
@@ -439,7 +472,7 @@ export class Notification {
     setTimeout(() => {
       notif.element?.parentNode?.removeChild(notif.element);
       this.notifications.delete(id);
-    }, 400);
+    }, TIMINGS.NOTIFICATION_HIDE_DELAY);
   }
 
   static scheduleHide(id, delay) {
@@ -457,16 +490,12 @@ export class Notification {
     this.notifications.forEach((_, id) => this.hide(id));
     this.transactions.forEach((_, id) => this.removeTransaction(id));
   }
-
-  static escapeHtml(text) {
-    const div = document.createElement("div");
-    div.textContent = text;
-    return div.innerHTML;
-  }
 }
-// END notifications.js
 
-// START connect.js
+// ============================================================
+// WALLET CONNECTION
+// ============================================================
+
 export class ConnectWallet {
   constructor(options = {}) {
     this.networkConfigs = options.networkConfigs || networkConfigs;
@@ -484,8 +513,10 @@ export class ConnectWallet {
       }
     });
 
-    // Auto-discover elements (deferred until DOM is ready)
-    this.elements = {};
+    this.initWhenReady();
+  }
+
+  initWhenReady() {
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", () => this.init());
     } else {
@@ -508,19 +539,12 @@ export class ConnectWallet {
       connectModal: document.querySelector("#connect-modal"),
       connectChainList: document.querySelector("#connect-chain-list"),
       connectWalletList: document.querySelector("#connect-wallet-list"),
+      connectRpc: document.querySelector("#connect-rpc"),
     };
   }
 
-  normalizeChainId(chainId) {
-    if (typeof chainId === "string" && chainId.startsWith("0x")) {
-      return parseInt(chainId, 16);
-    }
-    return Number(chainId);
-  }
-
   isAllowed(chainId) {
-    const normalized = this.normalizeChainId(chainId);
-    return this.allowedChains.includes(normalized);
+    return this.allowedChains.includes(normalizeChainId(chainId));
   }
 
   bindEvents() {
@@ -538,13 +562,15 @@ export class ConnectWallet {
       });
     }
 
-    if (this.elements.connectModal) {
-      this.elements.connectModal.addEventListener("click", (event) => {
-        event.stopPropagation();
-      });
-    }
+    this.elements.connectModal?.addEventListener("click", (event) => {
+      event.stopPropagation();
+    });
 
-    document.addEventListener("click", () => {
+    document.addEventListener("click", () => this.hideModal());
+
+    this.elements.connectRpc?.addEventListener("click", () => {
+      populateRpcInputs();
+      toggleRpcModal(true);
       this.hideModal();
     });
   }
@@ -584,9 +610,9 @@ export class ConnectWallet {
         provider.provider.request({ method: "eth_chainId" }),
       ]);
 
-      this.storage.setItem("connectCurrentChainId", chainId);
-      this.storage.setItem("connectLastWallet", name);
-      this.storage.setItem("connectConnected", "true");
+      this.storage.setItem(STORAGE_KEYS.CHAIN_ID, chainId);
+      this.storage.setItem(STORAGE_KEYS.LAST_WALLET, name);
+      this.storage.setItem(STORAGE_KEYS.IS_CONNECTED, "true");
 
       this.setupProviderEvents(provider);
       this.updateAddress(accounts[0]);
@@ -609,14 +635,9 @@ export class ConnectWallet {
   }
 
   setupProviderEvents(provider) {
-    if (this.currentProvider === provider.provider) {
-      return;
-    }
+    if (this.currentProvider === provider.provider) return;
 
-    if (this.currentProvider) {
-      this.currentProvider.removeAllListeners?.();
-    }
-
+    this.currentProvider?.removeAllListeners?.();
     this.currentProvider = provider.provider;
 
     provider.provider
@@ -628,7 +649,7 @@ export class ConnectWallet {
       .on("chainChanged", (chainId) => {
         this.updateNetworkStatus(chainId);
         if (this.onChainChangeCallback) {
-          const normalized = this.normalizeChainId(chainId);
+          const normalized = normalizeChainId(chainId);
           const name = this.chainIdToName[normalized] || `Unknown (${chainId})`;
           const allowed = this.isAllowed(chainId);
 
@@ -645,17 +666,17 @@ export class ConnectWallet {
   }
 
   updateAddress(address) {
-    if (this.elements.connectBtn) {
-      const short = `${address.substring(0, 5)}...${address.substring(address.length - 4)}`;
-      this.elements.connectBtn.innerHTML = `
-        <span class="connect-address-text">${short}</span>
-        <span class="connect-copy-icon" data-copy="${address}"></span>
-      `;
-      this.elements.connectBtn.classList.add("connected");
-      this.elements.connectBtn.classList.remove("ens-resolved");
-      this.elements.connectBtn.setAttribute("data-address", address);
-      this.resolveENS(address);
-    }
+    if (!this.elements.connectBtn) return;
+
+    const short = shortenAddress(address);
+    this.elements.connectBtn.innerHTML = `
+      <span class="connect-address-text">${short}</span>
+      <span class="connect-copy-icon" data-copy="${address}"></span>
+    `;
+    this.elements.connectBtn.classList.add("connected");
+    this.elements.connectBtn.classList.remove("ens-resolved");
+    this.elements.connectBtn.setAttribute("data-address", address);
+    this.resolveENS(address);
   }
 
   async resolveENS(address) {
@@ -667,9 +688,7 @@ export class ConnectWallet {
       if (!ensName) return;
 
       const ensAvatar = await mainnetProvider.getAvatar(ensName);
-      const short = `${address.substring(0, 5)}...${address.substring(
-        address.length - 4,
-      )}`;
+      const short = shortenAddress(address);
 
       let buttonContent = `
         <div class="ens-details">
@@ -681,7 +700,7 @@ export class ConnectWallet {
         </div>
       `;
       if (ensAvatar) {
-        buttonContent += `<img src="${ensAvatar}" style="border-radius: 5px">`;
+        buttonContent += `<img src="${ensAvatar}" style="border-radius: 50%">`;
       }
 
       this.elements.connectBtn.innerHTML = buttonContent;
@@ -702,7 +721,7 @@ export class ConnectWallet {
         params: [{ chainId: networkConfig.chainIdHex }],
       });
       this.hideModal();
-      this.storage.setItem("connectCurrentChainId", networkConfig.chainIdHex);
+      this.storage.setItem(STORAGE_KEYS.CHAIN_ID, networkConfig.chainIdHex);
       this.updateNetworkStatus(networkConfig.chainIdHex);
       this.render();
     } catch (error) {
@@ -712,15 +731,12 @@ export class ConnectWallet {
   }
 
   updateNetworkStatus(chainId) {
-    const normalized = this.normalizeChainId(chainId);
-    const network = Object.values(this.networkConfigs).find(
-      (net) => net.chainId === normalized || net.chainIdHex === chainId,
-    );
+    const network = getNetworkByChainId(chainId);
 
     if (network?.showInUI) {
-      this.storage.setItem("connectCurrentChainId", chainId);
+      this.storage.setItem(STORAGE_KEYS.CHAIN_ID, chainId);
     } else {
-      this.storage.removeItem("connectCurrentChainId");
+      this.storage.removeItem(STORAGE_KEYS.CHAIN_ID);
     }
   }
 
@@ -736,14 +752,14 @@ export class ConnectWallet {
       console.error("Disconnect failed:", error);
     }
 
-    if (this.currentProvider) {
-      this.currentProvider.removeAllListeners?.();
-      this.currentProvider = null;
-    }
+    this.currentProvider?.removeAllListeners?.();
+    this.currentProvider = null;
 
-    ["connectCurrentChainId", "connectLastWallet", "connectConnected"].forEach(
-      (key) => this.storage.removeItem(key),
-    );
+    [
+      STORAGE_KEYS.CHAIN_ID,
+      STORAGE_KEYS.LAST_WALLET,
+      STORAGE_KEYS.IS_CONNECTED,
+    ].forEach((key) => this.storage.removeItem(key));
 
     if (this.onDisconnectCallback) {
       this.onDisconnectCallback();
@@ -754,24 +770,17 @@ export class ConnectWallet {
       this.elements.connectBtn.classList.remove("connected", "ens-resolved");
     }
 
-    if (this.elements.connectModal) {
-      this.elements.connectModal.classList.remove("show");
-    }
-
+    this.elements.connectModal?.classList.remove("show");
     this.updateNetworkStatus(this.networkConfigs.ethereum.chainIdHex);
     this.render();
   }
 
   toggleModal() {
-    if (this.elements.connectModal) {
-      this.elements.connectModal.classList.toggle("show");
-    }
+    this.elements.connectModal?.classList.toggle("show");
   }
 
   hideModal() {
-    if (this.elements.connectModal) {
-      this.elements.connectModal.classList.remove("show");
-    }
+    this.elements.connectModal?.classList.remove("show");
   }
 
   render() {
@@ -808,10 +817,7 @@ export class ConnectWallet {
     const currentChainId = this.getCurrentChainId();
     const isConnected = this.isConnected();
 
-    const networksToShow = Object.entries(this.networkConfigs).filter(
-      ([, config]) => config.showInUI,
-    );
-
+    const networksToShow = getVisibleNetworks();
     const isSingleNetwork = networksToShow.length === 1;
 
     this.elements.connectChainList.classList.toggle(
@@ -874,15 +880,15 @@ export class ConnectWallet {
   }
 
   isConnected() {
-    return this.storage.getItem("connectConnected") === "true";
+    return this.storage.getItem(STORAGE_KEYS.IS_CONNECTED) === "true";
   }
 
   getCurrentChainId() {
-    return this.storage.getItem("connectCurrentChainId");
+    return this.storage.getItem(STORAGE_KEYS.CHAIN_ID);
   }
 
   getLastWallet() {
-    return this.storage.getItem("connectLastWallet");
+    return this.storage.getItem(STORAGE_KEYS.LAST_WALLET);
   }
 
   getConnectedProvider() {
@@ -910,7 +916,7 @@ export class ConnectWallet {
 
     try {
       const raw = await provider.request({ method: "eth_chainId" });
-      return this.normalizeChainId(raw);
+      return normalizeChainId(raw);
     } catch (error) {
       console.error("Failed to get chain ID:", error);
       return null;
@@ -938,4 +944,3 @@ export class ConnectWallet {
     this.onChainChangeCallback = callback;
   }
 }
-// END connect.js
