@@ -389,11 +389,6 @@ h3 {
   width: 28px;
   height: 28px;
   flex-shrink: 0;
-  transition: transform 0.2s ease;
-}
-
-.connect-chain-list button img:hover {
-  transform: scale(1.1);
 }
 
 .connect-chain-list button.chain-single {
