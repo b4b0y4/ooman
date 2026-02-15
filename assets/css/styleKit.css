@@ -928,13 +928,8 @@ h3 {
   opacity: 0.8;
 }
 
-.copy-success svg {
-  stroke: #22c55e;
-  opacity: 1;
-}
-
+.copy-success svg,
 .copy-error svg {
-  stroke: #ef4444;
   opacity: 1;
 }
 
