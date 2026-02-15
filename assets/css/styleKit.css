@@ -14,7 +14,6 @@
   --border: 1px solid #333;
 
   /* Special Colors */
-  --connect-dot: 46, 204, 113;
   --color-blue: 100, 181, 246;
   --color-green: 129, 199, 132;
   --color-orange: 255, 138, 101;
@@ -428,7 +427,7 @@ h3 {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background-color: rgb(var(--connect-dot));
+  background-color: rgb(var(--color-green));
   border: 1px solid var(--color-bg);
 }
 
@@ -438,19 +437,19 @@ h3 {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background-color: rgb(var(--connect-dot));
+  background-color: rgb(var(--color-green));
   animation: connect-pulse 1.5s ease-out infinite;
 }
 
 @keyframes connect-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(var(--connect-dot), 0.5);
+    box-shadow: 0 0 0 0 rgba(var(--color-green), 0.5);
   }
   70% {
-    box-shadow: 0 0 0 4px rgba(var(--connect-dot), 0);
+    box-shadow: 0 0 0 4px rgba(var(--color-green), 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(var(--connect-dot), 0);
+    box-shadow: 0 0 0 0 rgba(var(--color-green), 0);
   }
 }
 
