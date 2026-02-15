@@ -1,13 +1,13 @@
 import { ethers } from "./ethers.min.js";
 
 // ============================================================
-// WEI CONTRACT CONFIGURATION
+// WNS CONTRACT CONFIGURATION
 // ============================================================
 
-const WEI_CONTRACT_ADDRESS = "0x0000000000696760E15f265e828DB644A0c242EB";
+const WNS_CONTRACT_ADDRESS = "0x0000000000696760E15f265e828DB644A0c242EB";
 
 // Minimal ABI for reverse resolution
-const WEI_ABI = [
+const WNS_ABI = [
   {
     inputs: [{ internalType: "address", name: "addr", type: "address" }],
     name: "reverseResolve",
@@ -527,8 +527,8 @@ export class ConnectWallet {
     this.storage = options.storage || window.localStorage;
     this.currentProvider = null;
 
-    // Name resolution order: 'wei-first' or 'ens-first'
-    this.nameResolutionOrder = options.nameResolutionOrder || "wei-first";
+    // Name resolution order: 'wns-first' or 'ens-first'
+    this.nameResolutionOrder = options.nameResolutionOrder || "wns-first";
 
     // Precompute lookups
     this.chainIdToName = {};
@@ -703,25 +703,41 @@ export class ConnectWallet {
     this.elements.connectBtn.classList.add("connected");
     this.elements.connectBtn.classList.remove("ens-resolved");
     this.elements.connectBtn.setAttribute("data-address", address);
-    this.resolveENS(address);
+    this.resolveName(address);
   }
 
-  async resolveWeiName(address) {
+  // Resolve Wei Name Service specifically
+  async resolveWNS(address) {
     try {
       const provider = new ethers.JsonRpcProvider(getRpcUrl("ethereum"));
-      const weiContract = new ethers.Contract(
-        WEI_CONTRACT_ADDRESS,
-        WEI_ABI,
+      const wnsContract = new ethers.Contract(
+        WNS_CONTRACT_ADDRESS,
+        WNS_ABI,
         provider,
       );
-      const weiName = await weiContract.reverseResolve(address);
-      return weiName || null;
+      const wnsName = await wnsContract.reverseResolve(address);
+      return wnsName || null;
     } catch {
       return null;
     }
   }
 
+  // Resolve ENS specifically
   async resolveENS(address) {
+    try {
+      const mainnetProvider = new ethers.JsonRpcProvider(getRpcUrl("ethereum"));
+      const ensName = await mainnetProvider.lookupAddress(address);
+      if (!ensName) return { name: null, avatar: null };
+
+      const avatar = await mainnetProvider.getAvatar(ensName);
+      return { name: ensName, avatar };
+    } catch {
+      return { name: null, avatar: null };
+    }
+  }
+
+  // Orchestrate name resolution based on order preference
+  async resolveName(address) {
     if (!this.elements.connectBtn) return;
 
     const short = shortenAddress(address);
@@ -730,27 +746,27 @@ export class ConnectWallet {
     let resolutionSource = null;
 
     try {
-      const mainnetProvider = new ethers.JsonRpcProvider(getRpcUrl("ethereum"));
-
-      if (this.nameResolutionOrder === "wei-first") {
-        resolvedName = await this.resolveWeiName(address);
+      if (this.nameResolutionOrder === "wns-first") {
+        resolvedName = await this.resolveWNS(address);
         if (resolvedName) {
-          resolutionSource = "wei";
+          resolutionSource = "wns";
         } else {
-          resolvedName = await mainnetProvider.lookupAddress(address);
-          if (resolvedName) {
+          const ensResult = await this.resolveENS(address);
+          if (ensResult.name) {
+            resolvedName = ensResult.name;
+            resolvedAvatar = ensResult.avatar;
             resolutionSource = "ens";
-            resolvedAvatar = await mainnetProvider.getAvatar(resolvedName);
           }
         }
       } else {
-        resolvedName = await mainnetProvider.lookupAddress(address);
-        if (resolvedName) {
+        const ensResult = await this.resolveENS(address);
+        if (ensResult.name) {
+          resolvedName = ensResult.name;
+          resolvedAvatar = ensResult.avatar;
           resolutionSource = "ens";
-          resolvedAvatar = await mainnetProvider.getAvatar(resolvedName);
         } else {
-          resolvedName = await this.resolveWeiName(address);
-          if (resolvedName) resolutionSource = "wei";
+          resolvedName = await this.resolveWNS(address);
+          if (resolvedName) resolutionSource = "wns";
         }
       }
 
@@ -1015,9 +1031,9 @@ export class ConnectWallet {
   }
 
   setNameResolutionOrder(order) {
-    if (order !== "wei-first" && order !== "ens-first") {
+    if (order !== "wns-first" && order !== "ens-first") {
       console.warn(
-        'Invalid name resolution order. Use "wei-first" or "ens-first"',
+        'Invalid name resolution order. Use "wns-first" or "ens-first"',
       );
       return;
     }
@@ -1028,7 +1044,7 @@ export class ConnectWallet {
     if (this.isConnected()) {
       this.getAccount().then((address) => {
         if (address) {
-          this.resolveENS(address);
+          this.resolveName(address);
         }
       });
     }
