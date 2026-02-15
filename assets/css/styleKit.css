@@ -164,7 +164,7 @@ h3 {
   color: #ffcc80;
 }
 
-.connect-btn.ens-resolved {
+.connect-btn.name-resolved {
   flex-direction: row-reverse;
   justify-content: space-between;
   gap: 8px;
@@ -172,29 +172,29 @@ h3 {
   padding: 5px 10px;
 }
 
-.connect-btn.ens-resolved img {
+.connect-btn.name-resolved img {
   margin-right: 0;
 }
 
-.connect-btn .ens-details {
+.connect-btn .name-details {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
 }
 
-.connect-btn .ens-name {
+.connect-btn .resolved-name {
   display: flex;
   align-items: center;
   font-size: 0.9em;
 }
 
-.connect-btn .ens-address-row {
+.connect-btn .named-address-row {
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-.connect-btn .ens-address {
+.connect-btn .named-address {
   font-size: 0.6em;
   opacity: 0.7;
 }
@@ -226,12 +226,12 @@ h3 {
   height: 14px;
 }
 
-.ens-address-row .connect-copy-btn {
+.named-address-row .connect-copy-btn {
   width: 10px;
   height: 10px;
 }
 
-.ens-address-row .connect-copy-btn svg {
+.named-address-row .connect-copy-btn svg {
   width: 8px;
   height: 8px;
 }

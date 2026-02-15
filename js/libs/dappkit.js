@@ -701,7 +701,7 @@ export class ConnectWallet {
       <span class="connect-copy-btn" data-copy="${address}"></span>
     `;
     this.elements.connectBtn.classList.add("connected");
-    this.elements.connectBtn.classList.remove("ens-resolved");
+    this.elements.connectBtn.classList.remove("name-resolved");
     this.elements.connectBtn.setAttribute("data-address", address);
     this.resolveName(address);
   }
@@ -773,10 +773,10 @@ export class ConnectWallet {
       if (!resolvedName) return;
 
       let buttonContent = `
-        <div class="ens-details">
-          <div class="ens-name">${resolvedName}</div>
-          <div class="ens-address-row">
-            <span class="ens-address">${short}</span>
+        <div class="name-details">
+          <div class="resolved-name">${resolvedName}</div>
+          <div class="named-address-row">
+            <span class="named-address">${short}</span>
             <span class="connect-copy-btn" data-copy="${address}"></span>
           </div>
         </div>
@@ -787,7 +787,7 @@ export class ConnectWallet {
       }
 
       this.elements.connectBtn.innerHTML = buttonContent;
-      this.elements.connectBtn.classList.add("ens-resolved");
+      this.elements.connectBtn.classList.add("name-resolved");
       this.elements.connectBtn.setAttribute("data-address", address);
       this.elements.connectBtn.setAttribute(
         "data-resolution-source",
@@ -854,7 +854,7 @@ export class ConnectWallet {
 
     if (this.elements.connectBtn) {
       this.elements.connectBtn.innerHTML = "Connect";
-      this.elements.connectBtn.classList.remove("connected", "ens-resolved");
+      this.elements.connectBtn.classList.remove("connected", "name-resolved");
     }
 
     this.elements.connectModal?.classList.remove("show");
