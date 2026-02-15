@@ -1,6 +1,30 @@
 import { ethers } from "./ethers.min.js";
 
 // ============================================================
+// WEI CONTRACT CONFIGURATION
+// ============================================================
+
+const WEI_CONTRACT_ADDRESS = "0x0000000000696760E15f265e828DB644A0c242EB";
+
+// Minimal ABI for reverse resolution
+const WEI_ABI = [
+  {
+    inputs: [{ internalType: "address", name: "addr", type: "address" }],
+    name: "reverseResolve",
+    outputs: [{ internalType: "string", name: "", type: "string" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "string", name: "name", type: "string" }],
+    name: "resolve",
+    outputs: [{ internalType: "address", name: "", type: "address" }],
+    stateMutability: "view",
+    type: "function",
+  },
+];
+
+// ============================================================
 // CONSTANTS & CONFIGURATION
 // ============================================================
 
@@ -503,6 +527,9 @@ export class ConnectWallet {
     this.storage = options.storage || window.localStorage;
     this.currentProvider = null;
 
+    // Name resolution order: 'wei-first' or 'ens-first'
+    this.nameResolutionOrder = options.nameResolutionOrder || "wei-first";
+
     // Precompute lookups
     this.chainIdToName = {};
     this.allowedChains = [];
@@ -679,35 +706,79 @@ export class ConnectWallet {
     this.resolveENS(address);
   }
 
+  async resolveWeiName(address) {
+    try {
+      const provider = new ethers.JsonRpcProvider(getRpcUrl("ethereum"));
+      const weiContract = new ethers.Contract(
+        WEI_CONTRACT_ADDRESS,
+        WEI_ABI,
+        provider,
+      );
+      const weiName = await weiContract.reverseResolve(address);
+      return weiName || null;
+    } catch {
+      return null;
+    }
+  }
+
   async resolveENS(address) {
     if (!this.elements.connectBtn) return;
 
+    const short = shortenAddress(address);
+    let resolvedName = null;
+    let resolvedAvatar = null;
+    let resolutionSource = null;
+
     try {
       const mainnetProvider = new ethers.JsonRpcProvider(getRpcUrl("ethereum"));
-      const ensName = await mainnetProvider.lookupAddress(address);
-      if (!ensName) return;
 
-      const ensAvatar = await mainnetProvider.getAvatar(ensName);
-      const short = shortenAddress(address);
+      if (this.nameResolutionOrder === "wei-first") {
+        resolvedName = await this.resolveWeiName(address);
+        if (resolvedName) {
+          resolutionSource = "wei";
+        } else {
+          resolvedName = await mainnetProvider.lookupAddress(address);
+          if (resolvedName) {
+            resolutionSource = "ens";
+            resolvedAvatar = await mainnetProvider.getAvatar(resolvedName);
+          }
+        }
+      } else {
+        resolvedName = await mainnetProvider.lookupAddress(address);
+        if (resolvedName) {
+          resolutionSource = "ens";
+          resolvedAvatar = await mainnetProvider.getAvatar(resolvedName);
+        } else {
+          resolvedName = await this.resolveWeiName(address);
+          if (resolvedName) resolutionSource = "wei";
+        }
+      }
+
+      if (!resolvedName) return;
 
       let buttonContent = `
         <div class="ens-details">
-          <div class="ens-name">${ensName}</div>
+          <div class="ens-name">${resolvedName}</div>
           <div class="ens-address-row">
             <span class="ens-address">${short}</span>
             <span class="connect-copy-icon" data-copy="${address}"></span>
           </div>
         </div>
       `;
-      if (ensAvatar) {
-        buttonContent += `<img src="${ensAvatar}" style="border-radius: 50%">`;
+
+      if (resolvedAvatar) {
+        buttonContent += `<img src="${resolvedAvatar}" style="border-radius: 50%">`;
       }
 
       this.elements.connectBtn.innerHTML = buttonContent;
       this.elements.connectBtn.classList.add("ens-resolved");
       this.elements.connectBtn.setAttribute("data-address", address);
-    } catch (error) {
-      console.log("ENS resolution failed:", error);
+      this.elements.connectBtn.setAttribute(
+        "data-resolution-source",
+        resolutionSource,
+      );
+    } catch {
+      // Silently fail - address might not have a name
     }
   }
 
@@ -816,7 +887,6 @@ export class ConnectWallet {
     this.elements.connectChainList.innerHTML = "";
     const currentChainId = this.getCurrentChainId();
     const isConnected = this.isConnected();
-
     const networksToShow = getVisibleNetworks();
     const isSingleNetwork = networksToShow.length === 1;
 
@@ -942,5 +1012,29 @@ export class ConnectWallet {
 
   onChainChange(callback) {
     this.onChainChangeCallback = callback;
+  }
+
+  setNameResolutionOrder(order) {
+    if (order !== "wei-first" && order !== "ens-first") {
+      console.warn(
+        'Invalid name resolution order. Use "wei-first" or "ens-first"',
+      );
+      return;
+    }
+
+    this.nameResolutionOrder = order;
+
+    // Re-resolve current address if connected
+    if (this.isConnected()) {
+      this.getAccount().then((address) => {
+        if (address) {
+          this.resolveENS(address);
+        }
+      });
+    }
+  }
+
+  getNameResolutionOrder() {
+    return this.nameResolutionOrder;
   }
 }
