@@ -698,7 +698,7 @@ export class ConnectWallet {
     const short = shortenAddress(address);
     this.elements.connectBtn.innerHTML = `
       <span class="connect-address-text">${short}</span>
-      <span class="connect-copy-icon" data-copy="${address}"></span>
+      <span class="connect-copy-btn" data-copy="${address}"></span>
     `;
     this.elements.connectBtn.classList.add("connected");
     this.elements.connectBtn.classList.remove("ens-resolved");
@@ -777,7 +777,7 @@ export class ConnectWallet {
           <div class="ens-name">${resolvedName}</div>
           <div class="ens-address-row">
             <span class="ens-address">${short}</span>
-            <span class="connect-copy-icon" data-copy="${address}"></span>
+            <span class="connect-copy-btn" data-copy="${address}"></span>
           </div>
         </div>
       `;

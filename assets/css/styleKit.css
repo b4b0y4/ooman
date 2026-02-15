@@ -212,7 +212,7 @@ h3 {
   align-items: center;
 }
 
-.connect-copy-icon {
+.connect-copy-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -221,18 +221,18 @@ h3 {
   flex-shrink: 0;
 }
 
-.connect-copy-icon svg {
+.connect-copy-btn svg {
   display: block;
   width: 14px;
   height: 14px;
 }
 
-.ens-address-row .connect-copy-icon {
+.ens-address-row .connect-copy-btn {
   width: 10px;
   height: 10px;
 }
 
-.ens-address-row .connect-copy-icon svg {
+.ens-address-row .connect-copy-btn svg {
   width: 8px;
   height: 8px;
 }
