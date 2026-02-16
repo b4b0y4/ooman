@@ -981,7 +981,7 @@ h3 {
   --notif-color: var(--color-orange);
 }
 
-.notification.danger,
+.notification.error,
 .notification.tx-notification.failed {
   --notif-color: var(--color-red);
 }
