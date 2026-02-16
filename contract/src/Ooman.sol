@@ -31,12 +31,30 @@ contract Ooman is ERC721 {
     // Events
     event OomanMinted(uint256 indexed tokenId, address indexed minter);
     
+    // TODO: REMOVE BEFORE MAINNET - Testing kill switch
+    address public deployer;
+    bool public killed;
+    
     /**
      * @notice Contract is immutable - no owner controls
      * @param merkleRoot The root of the Merkle tree containing all valid token data
      */
     constructor(bytes32 merkleRoot) ERC721("Ooman", "OOMAN") {
         MERKLE_ROOT = merkleRoot;
+        deployer = msg.sender; // TODO: REMOVE BEFORE MAINNET
+    }
+    
+    // TODO: REMOVE BEFORE MAINNET - Destroy contract for testing
+    function kill() external {
+        require(msg.sender == deployer, "Only deployer");
+        killed = true;
+        // Send any ETH to deployer
+        payable(deployer).transfer(address(this).balance);
+    }
+    
+    modifier notKilled() {
+        require(!killed, "Contract killed");
+        _;
     }
     
     /**
@@ -51,7 +69,7 @@ contract Ooman is ERC721 {
         string calldata svg,
         string calldata attributes,
         bytes32[] calldata merkleProof
-    ) external {
+    ) external notKilled {
         require(tokenId < MAX_SUPPLY, "Ooman: invalid token ID");
         require(!minted[tokenId], "Ooman: already minted");
         require(bytes(svg).length > 0, "Ooman: empty SVG");
