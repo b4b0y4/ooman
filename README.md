@@ -33,17 +33,47 @@ cd contract
 
 ### 2. Deploy Contract
 
-**Testnet (Optimism Sepolia):**
+**Recommended Workflow:**
+1. **Test on Optimism** (cheap, fast) - verify everything works
+2. **Deploy to Ethereum Mainnet** (expensive, permanent) - the real deal
+
+#### Step 1: Test Deploy on Optimism
+
+Cheap test run (~$10-20) to verify your contract and minting works:
+
+**Ledger:**
 ```bash
-forge script script/Deploy.s.sol --rpc-url op_sepolia --broadcast --verify
+cd contract
+forge script script/Deploy.s.sol --ledger --broadcast --rpc-url https://mainnet.optimism.io
 ```
 
-**Mainnet:**
+**Private Key:**
 ```bash
-forge script script/Deploy.s.sol --rpc-url mainnet --broadcast --verify
+cd contract
+cp .env.example .env
+# Edit .env and add your PRIVATE_KEY
+forge script script/Deploy.s.sol --rpc-url https://mainnet.optimism.io --broadcast --verify
+```
+
+#### Step 2: Real Deploy on Ethereum Mainnet
+
+Once tested, deploy for real (~$100-200 depending on gas):
+
+**Ledger:**
+```bash
+forge script script/Deploy.s.sol --ledger --broadcast --rpc-url https://ethereum.reth.rs/rpc
+```
+
+**Private Key:**
+```bash
+forge script script/Deploy.s.sol --rpc-url https://ethereum.reth.rs/rpc --broadcast --verify
 ```
 
 Copy the deployed contract address!
+
+**Note:** 
+- The `--ledger` flag uses your hardware wallet for signing. Ensure your Ledger is unlocked and the Ethereum app is open.
+- Test first on Optimism - it's cheap enough to verify everything works before spending $100+ on mainnet.
 
 ### 3. Configure Frontend
 
@@ -59,18 +89,17 @@ const CONTRACT_CONFIG = {
 ### 4. Test Minting
 
 1. Open frontend in browser
-2. Connect wallet (MetaMask)
+2. Connect wallet
 3. Click on any Ooman
 4. Click "Claim"
 5. Confirm transaction
-6. ✅ See minted badge appear!
 
 ## Contract Details
 
 ### Merkle Root
 
 ```
-0x09e5a9f1167148a867bbc5392bc18dbcb6752c3dc09225eab32704aa04df34e6
+0x5aaf1b777148b194b3638f59a4d213d92a150e5c4a50e8fd5eb7a88c4343249e
 ```
 
 ### Contract Functions
@@ -136,27 +165,34 @@ The frontend is already configured to:
 ### Pre-Deployment Checklist
 
 - [ ] Test contract locally: `forge test`
-- [ ] Get test ETH for Optimism Sepolia
+- [ ] Have ~$10-20 worth of ETH on Optimism for testing
+- [ ] Have ~$100-200 worth of ETH on Ethereum mainnet for real deployment
 - [ ] Review contract one more time
 
-### Testnet Deployment
+### Step 1: Test on Optimism (Cheap)
 
 1. Run: `./setup.sh`
-2. Set PRIVATE_KEY in `.env`
-3. Deploy: `forge script script/Deploy.s.sol --rpc-url op_sepolia --broadcast`
+2. **Ledger:** Connect and unlock your Ledger, open Ethereum app
+   **OR** Set PRIVATE_KEY in `.env` for non-Ledger deployment
+3. Deploy:
+   - **Ledger:** `forge script script/Deploy.s.sol --ledger --broadcast --rpc-url https://mainnet.optimism.io`
+   - **Private key:** `forge script script/Deploy.s.sol --rpc-url https://mainnet.optimism.io --broadcast --verify`
 4. Copy contract address
-5. Verify: `forge verify-contract --chain op_sepolia <ADDRESS> src/Ooman.sol:Ooman`
-6. Update `js/app.js` with testnet address
-7. Test mint 1-3 tokens
+5. Verify: `forge verify-contract --chain optimism <ADDRESS> src/Ooman.sol:Ooman`
+6. Update `js/app.js` with the Optimism address
+7. Test mint 1-3 tokens (~$0.50-1 each on Optimism)
+8. **Make sure everything works!**
 
-### Mainnet Deployment
+### Step 2: Deploy to Ethereum Mainnet (Real)
 
-1. Have sufficient ETH for deployment (~$100-200)
-2. Deploy: `forge script script/Deploy.s.sol --rpc-url mainnet --broadcast`
+1. **Ledger:** Connect and unlock your Ledger
+2. Deploy:
+   - **Ledger:** `forge script script/Deploy.s.sol --ledger --broadcast --rpc-url https://ethereum.reth.rs/rpc`
+   - **Private key:** `forge script script/Deploy.s.sol --rpc-url https://ethereum.reth.rs/rpc --broadcast --verify`
 3. Copy contract address
-4. Verify on Etherscan
-5. Update `js/app.js` with mainnet address
-6. Test frontend on mainnet
+4. Verify: `forge verify-contract --chain mainnet <ADDRESS> src/Ooman.sol:Ooman`
+5. Update `js/app.js` with the mainnet address
+6. Launch!
 
 ### Post-Deployment
 
@@ -165,8 +201,8 @@ The frontend is already configured to:
 - [ ] Share with community!
 
 **Contract Address Log:**
-- **Optimism Sepolia:** `0x...`
-- **Ethereum Mainnet:** `0x...`
+- **Optimism Mainnet (Test):** `0x...` (Your test deployment)
+- **Ethereum Mainnet (Real):** `0x...` (Your production deployment)
 
 ## File Structure
 
@@ -229,10 +265,25 @@ echo "PRIVATE_KEY=0x..." > .env
 → Check CONTRACT_ADDRESS is correct
 
 ### "RPC URL not found"
-Add RPC endpoints to `foundry.toml` or use command-line flags:
+**Optimism Mainnet:**
 ```bash
-forge script script/Deploy.s.sol --rpc-url https://sepolia.optimism.io --broadcast
+forge script script/Deploy.s.sol --rpc-url https://mainnet.optimism.io --broadcast
 ```
+
+**Ethereum Mainnet:**
+```bash
+forge script script/Deploy.s.sol --rpc-url https://ethereum.reth.rs/rpc --broadcast
+```
+
+Other RPC options:
+- Optimism: `https://mainnet.optimism.io` (public), `https://rpc.ankr.com/optimism`
+- Ethereum: `https://eth.llamarpc.com`, `https://rpc.ankr.com/eth`
+
+### Ledger connection issues
+- Ensure Ledger is unlocked and Ethereum app is open
+- Try unplugging and replugging the Ledger
+- Make sure you have the latest Ledger firmware
+- Verify the derivation path if using a specific account
 
 ## License
 

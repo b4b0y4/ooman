@@ -57,7 +57,8 @@ contract Ooman is ERC721 {
         require(bytes(svg).length > 0, "Ooman: empty SVG");
         
         // Verify the token data is valid using Merkle proof
-        bytes32 leaf = keccak256(abi.encodePacked(tokenId, svg, attributes));
+        // Note: tree was generated with tokenId as string ("0", "1", etc.)
+        bytes32 leaf = keccak256(abi.encodePacked(tokenId.toString(), svg, attributes));
         require(_verifyMerkleProof(leaf, merkleProof), "Ooman: invalid proof");
         
         // Store data on-chain
