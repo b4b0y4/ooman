@@ -2,12 +2,31 @@ import { ethers } from "./libs/ethers.min.js";
 import { ConnectWallet, Notification, getRpcUrl } from "./libs/dappkit.js";
 
 // =============================================================
+// CONTRACT CONFIG
+// =============================================================
+
+const CONTRACT_CONFIG = {
+  ADDRESS: "",
+
+  ABI: [
+    "function mint(uint256 tokenId, string calldata svg, string calldata attributes, bytes32[] calldata merkleProof) external",
+    "function tokenURI(uint256 tokenId) external view returns (string memory)",
+    "function getSVG(uint256 tokenId) external view returns (string memory)",
+    "function getAttributes(uint256 tokenId) external view returns (string memory)",
+    "function isMinted(uint256 tokenId) external view returns (bool)",
+    "function totalMinted() external view returns (uint256)",
+    "function MERKLE_ROOT() external view returns (bytes32)",
+    "event OomanMinted(uint256 indexed tokenId, address indexed minter)",
+  ],
+};
+
+// =============================================================
 // CONFIG
 // =============================================================
 
 const CONFIG = {
   DATA_CHUNK_COUNT: 10,
-  DATA_CHUNK_PATTERN: "./data/Ooman_metadata_{i}.json",
+  DATA_CHUNK_PATTERN: "./data/Ooman_merkle_proofs_{i}.json",
   INITIAL_DATA_CHUNKS: 1,
   RENDER_BATCH_SIZE: 100,
   LAZY_ROOT_MARGIN: "100px",
@@ -23,10 +42,101 @@ const state = {
   filteredMetadata: [],
   activeFilters: [],
   lazyLoadObserver: null,
-  renderedCards: new Map(), // name -> DOM element
+  renderedCards: new Map(),
 };
 
 const wallet = new ConnectWallet();
+
+// =============================================================
+// CONTRACT HELPERS
+// =============================================================
+
+function parseTokenId(name) {
+  const match = name.match(/#(\d+)/);
+  return match ? parseInt(match[1], 10) : null;
+}
+
+async function isTokenMinted(tokenId) {
+  if (!CONTRACT_CONFIG.ADDRESS) return false;
+
+  try {
+    let provider;
+    if (wallet && wallet.isConnected()) {
+      provider = wallet.getEthersProvider();
+    } else {
+      provider = new ethers.providers.JsonRpcProvider(
+        "https://mainnet.optimism.io",
+      );
+    }
+
+    const contract = new ethers.Contract(
+      CONTRACT_CONFIG.ADDRESS,
+      CONTRACT_CONFIG.ABI,
+      provider,
+    );
+    return await contract.isMinted(tokenId);
+  } catch (error) {
+    console.error("Error checking mint status:", error);
+    return false;
+  }
+}
+
+async function mintToken(item) {
+  if (!wallet) {
+    Notification.show("Wallet not initialized", "warning");
+    return;
+  }
+
+  if (!wallet.isConnected()) {
+    Notification.show("Please connect your wallet first", "warning");
+    return;
+  }
+
+  if (!CONTRACT_CONFIG.ADDRESS) {
+    Notification.show(
+      "Contract not configured. Please set CONTRACT_CONFIG.ADDRESS",
+      "warning",
+    );
+    return;
+  }
+
+  const tokenId = parseTokenId(item.name);
+  if (tokenId === null) {
+    Notification.show("Invalid token", "warning");
+    return;
+  }
+
+  const alreadyMinted = await isTokenMinted(tokenId);
+  if (alreadyMinted) {
+    Notification.show("This token is already minted", "warning");
+    return;
+  }
+
+  const provider = wallet.getEthersProvider();
+  const signer = await provider.getSigner();
+  const contract = new ethers.Contract(
+    CONTRACT_CONFIG.ADDRESS,
+    CONTRACT_CONFIG.ABI,
+    signer,
+  );
+
+  const attributes = JSON.stringify(item.attributes);
+
+  Notification.show(`Minting ${item.name}...`, "pending");
+
+  const tx = await contract.mint(tokenId, item.image, attributes, item.proof);
+
+  Notification.track({
+    label: `Mint ${item.name}`,
+    txHash: tx.hash,
+    onSuccess: () =>
+      Notification.show(`Successfully minted ${item.name}!`, "success"),
+    onError: (err) =>
+      Notification.show(`Failed to mint: ${err.message}`, "error"),
+  });
+
+  return tx;
+}
 
 // =============================================================
 // INIT
@@ -69,7 +179,13 @@ async function loadMetadata() {
     const results = await Promise.allSettled(initial.map(fetchChunk));
     state.metadata = results
       .filter((r) => r.status === "fulfilled")
-      .flatMap((r) => r.value);
+      .flatMap((r) => Object.values(r.value.proofs))
+      .map((item) => ({
+        ...item,
+        attributes: typeof item.attributes === 'string' 
+          ? JSON.parse(item.attributes) 
+          : item.attributes
+      }));
 
     state.filteredMetadata = [...state.metadata];
 
@@ -312,6 +428,7 @@ const createCard = (item) => {
   const div = document.createElement("div");
   div.className = "svg-card";
   div.dataset.id = item.name;
+  div.dataset.minted = "false";
   div.onclick = () => openModal(item.name);
   div.innerHTML = `
     <div class="svg-preview">
@@ -412,7 +529,7 @@ const showError = (msg) => {
 // MODAL
 // =============================================================
 
-function openModal(itemName) {
+async function openModal(itemName) {
   const item = state.metadata.find((m) => m.name === itemName);
   if (!item) return;
 
@@ -435,10 +552,32 @@ function openModal(itemName) {
     .join("");
 
   document.getElementById("modal-download").onclick = () => download(item);
-  document.getElementById("modal-claim").onclick = () => {
-    claim(itemName);
-    closeModal();
-  };
+
+  const claimBtn = document.getElementById("modal-claim");
+
+  let isMinted = false;
+  if (wallet.isConnected() && CONTRACT_CONFIG.ADDRESS) {
+    const tokenId = parseTokenId(item.name);
+    if (tokenId !== null) {
+      try {
+        isMinted = await isTokenMinted(tokenId);
+      } catch (error) {
+        console.error("Error checking mint status:", error);
+      }
+    }
+  }
+
+  if (isMinted) {
+    claimBtn.style.display = "none";
+  } else {
+    claimBtn.style.display = "block";
+    claimBtn.textContent = "Claim";
+    claimBtn.disabled = false;
+    claimBtn.classList.remove("minted");
+    claimBtn.onclick = () => {
+      claim(itemName);
+    };
+  }
 
   modal.classList.add("show");
   document.body.style.overflow = "hidden";
@@ -473,23 +612,8 @@ async function claim(itemName) {
   const item = state.metadata.find((m) => m.name === itemName);
   if (!item) return;
 
-  if (!wallet.isConnected()) {
-    Notification.show("Please connect your wallet first", "warning");
-    return;
-  }
-
-  try {
-    const provider = wallet.getEthersProvider();
-    const signer = await provider.getSigner();
-    const account = await wallet.getAccount();
-    const tx = await signer.sendTransaction({ to: account, value: 0 });
-    Notification.track(tx, { label: `Claiming ${item.name}` });
-  } catch (error) {
-    Notification.show(
-      "Claim failed: " + error.message.split("(")[0].trim(),
-      "danger",
-    );
-  }
+  closeModal();
+  await mintToken(item);
 }
 
 // =============================================================
@@ -516,6 +640,7 @@ function setupWalletListeners() {
 // =============================================================
 
 Object.assign(window, {
+  CONTRACT_CONFIG,
   toggleFilters,
   addFilter,
   removeFilter,
@@ -523,4 +648,7 @@ Object.assign(window, {
   closeItemModal: closeModal,
   downloadSVG: download,
   claim,
+  mintToken,
+  isTokenMinted,
+  parseTokenId,
 });

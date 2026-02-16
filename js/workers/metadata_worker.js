@@ -12,7 +12,13 @@ self.onmessage = async (e) => {
 
       const data = await res.json();
 
-      buffer.push(...data);
+      const proofs = Object.values(data.proofs).map((item) => ({
+        ...item,
+        attributes: typeof item.attributes === 'string'
+          ? JSON.parse(item.attributes)
+          : item.attributes
+      }));
+      buffer.push(...proofs);
 
       if (buffer.length >= batchSize) {
         self.postMessage({
