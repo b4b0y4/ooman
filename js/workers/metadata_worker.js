@@ -12,12 +12,29 @@ self.onmessage = async (e) => {
 
       const data = await res.json();
 
-      const proofs = Object.values(data.proofs).map((item) => ({
-        ...item,
-        attributes: typeof item.attributes === 'string'
-          ? JSON.parse(item.attributes)
-          : item.attributes
-      }));
+      // Handle new metadata format: array of objects with merkle_proof field
+      const proofs = Array.isArray(data) 
+        ? data.map((item) => {
+            const attributesParsed = typeof item.attributes === "string"
+              ? JSON.parse(item.attributes)
+              : item.attributes;
+            return {
+              ...item,
+              proof: item.merkle_proof || item.proof,
+              attributes: item.attributes,
+              attributesParsed: attributesParsed,
+            };
+          })
+        : Object.values(data.proofs || {}).map((item) => {
+            const attributesParsed = typeof item.attributes === "string"
+              ? JSON.parse(item.attributes)
+              : item.attributes;
+            return {
+              ...item,
+              attributes: item.attributes,
+              attributesParsed: attributesParsed,
+            };
+          });
       buffer.push(...proofs);
 
       if (buffer.length >= batchSize) {

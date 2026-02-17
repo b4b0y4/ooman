@@ -6,17 +6,16 @@ import { ConnectWallet, Notification, getRpcUrl } from "./libs/dappkit.js";
 // =============================================================
 
 const CONTRACT_CONFIG = {
-  ADDRESS: "",
+  ADDRESS: "0x1aBf1bca9e242b8422c407c34ce9afC914E78335",
 
   ABI: [
-    "function mint(uint256 tokenId, string calldata svg, string calldata attributes, bytes32[] calldata merkleProof) external",
+    "function claim(uint256 tokenId, string calldata image, string calldata attributes, bytes32[] calldata proof) external",
     "function tokenURI(uint256 tokenId) external view returns (string memory)",
     "function getSVG(uint256 tokenId) external view returns (string memory)",
     "function getAttributes(uint256 tokenId) external view returns (string memory)",
     "function isMinted(uint256 tokenId) external view returns (bool)",
-    "function totalMinted() external view returns (uint256)",
     "function MERKLE_ROOT() external view returns (bytes32)",
-    "event OomanMinted(uint256 indexed tokenId, address indexed minter)",
+    "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
   ],
 };
 
@@ -25,8 +24,8 @@ const CONTRACT_CONFIG = {
 // =============================================================
 
 const CONFIG = {
-  DATA_CHUNK_COUNT: 10,
-  DATA_CHUNK_PATTERN: "./data/Ooman_merkle_proofs_{i}.json",
+  DATA_CHUNK_COUNT: 9,
+  DATA_CHUNK_PATTERN: "./data/Ooman_metadata_{i}.json",
   INITIAL_DATA_CHUNKS: 1,
   RENDER_BATCH_SIZE: 100,
   LAZY_ROOT_MARGIN: "100px",
@@ -64,9 +63,10 @@ async function isTokenMinted(tokenId) {
     if (wallet && wallet.isConnected()) {
       provider = wallet.getEthersProvider();
     } else {
-      provider = new ethers.providers.JsonRpcProvider(
-        "https://mainnet.optimism.io",
-      );
+      // Support both ethers v5 and v6
+      const JsonRpcProvider =
+        ethers.JsonRpcProvider || ethers.providers?.JsonRpcProvider;
+      provider = new JsonRpcProvider("https://mainnet.optimism.io");
     }
 
     const contract = new ethers.Contract(
@@ -112,6 +112,108 @@ async function mintToken(item) {
     return;
   }
 
+  // Debug: Verify data matches the proof
+  console.log("Minting token:", tokenId);
+  console.log("SVG length:", item.image?.length);
+  console.log("Attributes:", item.attributes);
+  console.log("Proof length:", item.proof?.length);
+
+  // Verify we have all required data
+  if (
+    !item.image ||
+    !item.attributes ||
+    !item.proof ||
+    item.proof.length === 0
+  ) {
+    console.error("Missing required data:", {
+      hasImage: !!item.image,
+      hasAttributes: !!item.attributes,
+      proofLength: item.proof?.length,
+    });
+    Notification.show("Missing proof data. Please reload the page.", "error");
+    return;
+  }
+
+  // Local verification before submitting transaction
+  console.log("Verifying proof locally...");
+
+  // Debug: Compare with original JSON data
+  console.log("Fetching original data from JSON for comparison...");
+  const chunkNum = Math.floor(tokenId / 1000) + 1;
+  fetch(`./data/Ooman_metadata_${chunkNum}.json`)
+    .then((r) => r.json())
+    .then((data) => {
+      const items = Array.isArray(data)
+        ? data
+        : Object.values(data.proofs || {});
+      const original = items.find((item) => item.token_id === tokenId);
+      if (original) {
+        console.log("Original image length:", original.image.length);
+        console.log("Current image length:", item.image.length);
+        console.log(
+          "Lengths match:",
+          original.image.length === item.image.length,
+        );
+        console.log("Images match:", original.image === item.image);
+        console.log(
+          "Attributes match:",
+          JSON.stringify(original.attributes) ===
+            JSON.stringify(item.attributes),
+        );
+        console.log(
+          "Proofs match:",
+          JSON.stringify(original.merkle_proof || original.proof) ===
+            JSON.stringify(item.proof),
+        );
+
+        if (original.image !== item.image) {
+          // Find first difference
+          for (
+            let i = 0;
+            i < Math.min(original.image.length, item.image.length);
+            i++
+          ) {
+            if (original.image[i] !== item.image[i]) {
+              console.log(`First difference at position ${i}:`);
+              console.log(
+                "Original:",
+                original.image.substring(Math.max(0, i - 10), i + 10),
+              );
+              console.log(
+                "Current:",
+                item.image.substring(Math.max(0, i - 10), i + 10),
+              );
+              break;
+            }
+          }
+        }
+      }
+    })
+    .catch((e) => console.error("Failed to fetch original:", e));
+
+  const isValid = verifyMerkleProof(
+    tokenId,
+    item.image,
+    item.attributes,
+    item.proof,
+    CONTRACT_CONFIG.MERKLE_ROOT,
+  );
+
+  if (!isValid) {
+    console.error("Local proof verification failed!");
+    console.error("Token ID:", tokenId);
+    console.error("SVG length:", item.image.length);
+    console.error("Attributes:", item.attributes);
+    console.error("Proof:", item.proof);
+    Notification.show(
+      "Proof verification failed locally. The data doesn't match the Merkle tree.",
+      "error",
+    );
+    return;
+  }
+
+  console.log("Local verification passed!");
+
   const provider = wallet.getEthersProvider();
   const signer = await provider.getSigner();
   const contract = new ethers.Contract(
@@ -120,22 +222,55 @@ async function mintToken(item) {
     signer,
   );
 
-  const attributes = JSON.stringify(item.attributes);
+  // Get contract's Merkle root for verification
+  try {
+    const contractRoot = await contract.MERKLE_ROOT();
+    console.log("Contract Merkle Root:", contractRoot);
+  } catch (e) {
+    console.warn("Could not fetch contract root:", e);
+  }
 
-  Notification.show(`Minting ${item.name}...`, "pending");
+  Notification.show(`Minting ${item.name}...`, "info");
 
-  const tx = await contract.mint(tokenId, item.image, attributes, item.proof);
+  try {
+    // Convert attributes array to JSON string if needed
+    const attributesString =
+      typeof item.attributes === "string"
+        ? item.attributes
+        : JSON.stringify(item.attributes);
 
-  Notification.track({
-    label: `Mint ${item.name}`,
-    txHash: tx.hash,
-    onSuccess: () =>
-      Notification.show(`Successfully minted ${item.name}!`, "success"),
-    onError: (err) =>
-      Notification.show(`Failed to mint: ${err.message}`, "error"),
-  });
+    const tx = await contract.claim(
+      tokenId,
+      item.image,
+      attributesString,
+      item.proof,
+    );
 
-  return tx;
+    Notification.track({
+      label: `Mint ${item.name}`,
+      txHash: tx.hash,
+      onSuccess: () =>
+        Notification.show(`Successfully minted ${item.name}!`, "success"),
+      onError: (err) =>
+        Notification.show(`Failed to mint: ${err.message}`, "error"),
+    });
+
+    return tx;
+  } catch (error) {
+    console.error("Mint error:", error);
+
+    // Provide more specific error messages
+    if (error.message?.includes("invalid proof")) {
+      Notification.show(
+        "Invalid proof: The data doesn't match the Merkle tree. " +
+          "Make sure you're using the exact SVG and attributes from the JSON file.",
+        "error",
+      );
+    } else {
+      Notification.show(`Failed to mint: ${error.message}`, "error");
+    }
+    throw error;
+  }
 }
 
 // =============================================================
@@ -179,13 +314,30 @@ async function loadMetadata() {
     const results = await Promise.allSettled(initial.map(fetchChunk));
     state.metadata = results
       .filter((r) => r.status === "fulfilled")
-      .flatMap((r) => Object.values(r.value.proofs))
-      .map((item) => ({
-        ...item,
-        attributes: typeof item.attributes === 'string' 
-          ? JSON.parse(item.attributes) 
-          : item.attributes
-      }));
+      .flatMap((r) => {
+        // Handle new metadata format: array of objects with merkle_proof field
+        const data = r.value;
+        if (Array.isArray(data)) {
+          return data.map((item) => ({
+            ...item,
+            proof: item.merkle_proof || item.proof,
+            attributes: item.attributes,
+            attributesParsed:
+              typeof item.attributes === "string"
+                ? JSON.parse(item.attributes)
+                : item.attributes,
+          }));
+        }
+        // Legacy format: object with proofs property
+        return Object.values(data.proofs || {}).map((item) => ({
+          ...item,
+          attributes: item.attributes,
+          attributesParsed:
+            typeof item.attributes === "string"
+              ? JSON.parse(item.attributes)
+              : item.attributes,
+        }));
+      });
 
     state.filteredMetadata = [...state.metadata];
 
@@ -228,15 +380,11 @@ async function loadBackground(files) {
 
       if (state.activeFilters.length === 0) {
         state.filteredMetadata.push(...data);
-        if (state.metadata.length % 400 === 0 || msg.final) {
-          appendItems(data);
-        }
+        appendItems(data);
       }
 
-      if (state.metadata.length % 400 === 0) {
-        updateFilters();
-        updateCount();
-      }
+      updateFilters();
+      updateCount();
     }
 
     if (msg.type === "error") {
@@ -293,7 +441,7 @@ const observeLazyImages = () => {
 // =============================================================
 
 const matchesFilter = (item, filter) =>
-  item.attributes.some(
+  item.attributesParsed.some(
     (attr) =>
       attr.trait_type === filter.trait_type && attr.value === filter.value,
   );
@@ -361,7 +509,7 @@ function updateFilters() {
   const traits = {};
 
   state.metadata.forEach((item) => {
-    item.attributes.forEach((attr) => {
+    item.attributesParsed.forEach((attr) => {
       if (!traits[attr.trait_type]) traits[attr.trait_type] = {};
       if (!traits[attr.trait_type][attr.value]) {
         traits[attr.trait_type][attr.value] = 0;
@@ -424,15 +572,21 @@ function createFilterCategoryElement(traitType, values) {
 const placeholder =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%23f0f0f0' width='100' height='100'/%3E%3C/svg%3E";
 
+const svgToDataUri = (svg) => {
+  if (svg.startsWith("data:")) return svg;
+  return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
+};
+
 const createCard = (item) => {
   const div = document.createElement("div");
   div.className = "svg-card";
   div.dataset.id = item.name;
   div.dataset.minted = "false";
   div.onclick = () => openModal(item.name);
+  const imageUri = svgToDataUri(item.image);
   div.innerHTML = `
     <div class="svg-preview">
-      <img class="lazy" data-src="${item.image}" alt="${item.name}" src="${placeholder}" loading="lazy" decoding="async" />
+      <img class="lazy" data-src="${imageUri}" alt="${item.name}" src="${placeholder}" loading="lazy" decoding="async" />
     </div>
     <div class="svg-info">
       <div class="svg-id">${colorize(item.name)}</div>
@@ -534,13 +688,14 @@ async function openModal(itemName) {
   if (!item) return;
 
   const modal = document.getElementById("item-modal");
+  const imageUri = svgToDataUri(item.image);
 
-  document.getElementById("modal-img").src = item.image;
+  document.getElementById("modal-img").src = imageUri;
   const mobilImg = document.getElementById("modal-img-mobile");
-  if (mobilImg) mobilImg.src = item.image;
+  if (mobilImg) mobilImg.src = imageUri;
 
   document.getElementById("modal-title").innerHTML = colorize(item.name);
-  document.getElementById("modal-traits").innerHTML = item.attributes
+  document.getElementById("modal-traits").innerHTML = item.attributesParsed
     .map(
       (attr) => `
       <div class="modal-trait">
@@ -593,9 +748,9 @@ const closeModal = () => {
 // =============================================================
 
 function download(item) {
-  const svgData = decodeURIComponent(
-    item.image.replace("data:image/svg+xml;utf8,", ""),
-  );
+  const svgData = item.image.startsWith("data:")
+    ? decodeURIComponent(item.image.replace("data:image/svg+xml;utf8,", ""))
+    : item.image;
   const blob = new Blob([svgData], { type: "image/svg+xml" });
   const url = URL.createObjectURL(blob);
 
