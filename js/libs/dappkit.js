@@ -58,6 +58,15 @@ export const networkConfigs = {
     explorerUrl: "https://etherscan.io/tx/",
     showInUI: true,
   },
+  optimism: {
+    name: "Optimism",
+    rpcUrl: "https://mainnet.optimism.io",
+    chainId: 10,
+    chainIdHex: "0xa",
+    icon: "./assets/img/op.png",
+    explorerUrl: "https://optimistic.etherscan.io/tx/",
+    showInUI: true,
+  },
 };
 
 // ============================================================
