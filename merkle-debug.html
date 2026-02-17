@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Merkle Debug</title>
+</head>
+<body>
+    <h1>Merkle Tree Debug</h1>
+    <div id="output"></div>
+    <script type="module">
+        import { ethers } from "./js/libs/ethers.min.js";
+        
+        const output = document.getElementById('output');
+        const log = (msg) => {
+            console.log(msg);
+            output.innerHTML += msg + '<br>';
+        };
+        
+        try {
+            const res = await fetch('./data/Ooman_merkle_proofs_1.json');
+            const data = await res.json();
+            const expectedRoot = data.merkleRoot;
+            const token0 = data.proofs['0'];
+            const proof = token0.proof;
+            
+            log('Expected Root: ' + expectedRoot);
+            log('Proof has ' + proof.length + ' hashes');
+            log('');
+            
+            const tokenId = 0;
+            const svg = token0.image;
+            const attributes = token0.attributes;
+            
+            // Support both ethers v5 and v6
+            const isV6 = ethers.keccak256 !== undefined;
+            const keccak256 = isV6 ? ethers.keccak256 : ethers.utils.keccak256;
+            const concat = isV6 ? ethers.concat : ethers.utils.concat;
+            const toUtf8Bytes = isV6 ? ethers.toUtf8Bytes : ethers.utils.toUtf8Bytes;
+            const zeroPadValue = isV6 ? ethers.zeroPadValue : ethers.utils.hexZeroPad;
+            const toBeHex = isV6 ? ethers.toBeHex : (n) => ethers.BigNumber.from(n).toHexString();
+            
+            // Different leaf computation methods
+            const testHashes = [];
+            
+            // 1. tokenId (32 bytes) + svg + attrs
+            testHashes.push({
+                name: 'tokenId[32] + svg + attrs',
+                hash: keccak256(concat([
+                    zeroPadValue(toBeHex(tokenId), 32),
+                    toUtf8Bytes(svg),
+                    toUtf8Bytes(attributes)
+                ]))
+            });
+            
+            // 2. Just svg + attrs
+            testHashes.push({
+                name: 'svg + attrs',
+                hash: keccak256(concat([toUtf8Bytes(svg), toUtf8Bytes(attributes)]))
+            });
+            
+            // 3. JSON stringify
+            testHashes.push({
+                name: 'JSON.stringify({tokenId, svg, attrs})',
+                hash: keccak256(toUtf8Bytes(JSON.stringify({tokenId, svg, attributes})))
+            });
+            
+            // 4. JSON stringify as array
+            testHashes.push({
+                name: 'JSON.stringify([tokenId, svg, attrs])',
+                hash: keccak256(toUtf8Bytes(JSON.stringify([tokenId, svg, attributes])))
+            });
+            
+            // 5. keccak256(svg) separately
+            testHashes.push({
+                name: 'tokenId + hash(svg) + hash(attrs)',
+                hash: keccak256(concat([
+                    zeroPadValue(toBeHex(tokenId), 32),
+                    keccak256(toUtf8Bytes(svg)),
+                    keccak256(toUtf8Bytes(attributes))
+                ]))
+            });
+            
+            // 6. Just SVG
+            testHashes.push({
+                name: 'svg only',
+                hash: keccak256(toUtf8Bytes(svg))
+            });
+            
+            // 7. Just keccak256 of concatenated strings (no UTF8 encoding)
+            const svgAttrsStr = svg + attributes;
+            testHashes.push({
+                name: 'keccak256(svg + attrs as string)',
+                hash: keccak256(svgAttrsStr)
+            });
+            
+            // 8. With tokenId as first 32 bytes of string
+            const tokenIdBytes = new Uint8Array(32);
+            let tokenIdValue = BigInt(tokenId);
+            for (let i = 31; i >= 0; i--) {
+                tokenIdBytes[i] = Number(tokenIdValue & BigInt(0xff));
+                tokenIdValue >>= BigInt(8);
+            }
+            testHashes.push({
+                name: 'tokenId bytes + svg + attrs',
+                hash: keccak256(concat([tokenIdBytes, toUtf8Bytes(svg), toUtf8Bytes(attributes)]))
+            });
+            
+            log('Testing different leaf computation methods:');
+            testHashes.forEach(({name, hash}) => {
+                log('<br><b>' + name + '</b>:');
+                log('  Leaf: ' + hash);
+                
+                let computedHash = hash;
+                for (let i = 0; i < proof.length; i++) {
+                    const proofElement = proof[i];
+                    if (computedHash.toLowerCase() < proofElement.toLowerCase()) {
+                        computedHash = keccak256(concat([computedHash, proofElement]));
+                    } else {
+                        computedHash = keccak256(concat([proofElement, computedHash]));
+                    }
+                }
+                
+                log('  Final: ' + computedHash);
+                const match = computedHash.toLowerCase() === expectedRoot.toLowerCase();
+                log('  Match: ' + (match ? '<b style="color:green">YES!</b>' : 'No'));
+            });
+            
+        } catch (e) {
+            log('Error: ' + e.message);
+            console.error(e);
+        }
+    </script>
+</body>
+</html>
