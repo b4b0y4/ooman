@@ -15,4 +15,4 @@ op = "https://mainnet.optimism.io"
 
 [etherscan]
 mainnet = { key = "${ETHERSCAN_KEY}" }
-op = { key = "${OPTIMISTIC_ETHERSCAN_KEY}" }
+op = { key = "${ETHERSCAN_KEY}" }

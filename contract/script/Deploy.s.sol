@@ -46,18 +46,28 @@ contract DeployScript is Script {
     }
     
     function readMerkleRoot() internal view returns (bytes32) {
-        string memory path = string.concat(
-            vm.projectRoot(),
-            "/../data/Ooman_merkle_root.json"
-        );
+        // Try multiple possible paths
+        string[] memory paths = new string[](2);
+        paths[0] = string.concat(vm.projectRoot(), "/../data/Ooman_merkle_root.json");
+        paths[1] = "./../data/Ooman_merkle_root.json";
         
-        try vm.readFile(path) returns (string memory json) {
-            return abi.decode(vm.parseJson(json, ".merkle_root"), (bytes32));
-        } catch {
-            // Fallback to hardcoded if file read fails
-            console.log("Warning: Could not read merkle root from file");
-            console.log("Using hardcoded root - verify this is correct!");
-            return 0x1b63306dd23173f53434bc807715e8ac1a2dc41f60011d8ba972f56590fa526d;
+        for (uint i = 0; i < paths.length; i++) {
+            try vm.readFile(paths[i]) returns (string memory json) {
+                console.log("Successfully read merkle root from:", paths[i]);
+                return abi.decode(vm.parseJson(json, ".merkle_root"), (bytes32));
+            } catch {
+                continue;
+            }
         }
+        
+        // Fallback to hardcoded if file read fails
+        console.log("Warning: Could not read merkle root from any path");
+        console.log("Tried:");
+        for (uint i = 0; i < paths.length; i++) {
+            console.log("  -", paths[i]);
+        }
+        console.log("Using hardcoded root - verify this is correct!");
+        console.log("Make sure data/Ooman_merkle_root.json exists with the correct root");
+        revert("Could not read merkle root from file");
     }
 }

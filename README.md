@@ -224,8 +224,7 @@ Each file is an array of token objects containing:
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `MAX_SUPPLY` | Total tokens (1-10000) | Yes |
-| `OPTIMISTIC_ETHERSCAN_KEY` | For OP verification | Yes for OP |
-| `ETHERSCAN_KEY` | For mainnet verification | Yes for mainnet |
+| `ETHERSCAN_KEY` | For contract verification (works on all networks) | Yes |
 
 ## Gas Costs
 
