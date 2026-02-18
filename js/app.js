@@ -6,7 +6,7 @@ import { ConnectWallet, Notification, getRpcUrl } from "./libs/dappkit.js";
 // =============================================================
 
 const CONTRACT_CONFIG = {
-  ADDRESS: "0x1aBf1bca9e242b8422c407c34ce9afC914E78335",
+  ADDRESS: "0x8A3cc414644CEBD656397aB8A5C7Cc4bb1acEd0E",
 
   ABI: [
     "function claim(uint256 tokenId, string calldata image, string calldata attributes, bytes32[] calldata proof) external",
@@ -16,6 +16,9 @@ const CONTRACT_CONFIG = {
     "function isMinted(uint256 tokenId) external view returns (bool)",
     "function MERKLE_ROOT() external view returns (bytes32)",
     "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
+    "error AlreadyMinted()",
+    "error InvalidProof()",
+    "error InvalidTokenId()",
   ],
 };
 
@@ -134,86 +137,6 @@ async function mintToken(item) {
     return;
   }
 
-  // Local verification before submitting transaction
-  console.log("Verifying proof locally...");
-
-  // Debug: Compare with original JSON data
-  console.log("Fetching original data from JSON for comparison...");
-  const chunkNum = Math.floor(tokenId / 1000) + 1;
-  fetch(`./data/Ooman_metadata_${chunkNum}.json`)
-    .then((r) => r.json())
-    .then((data) => {
-      const items = Array.isArray(data)
-        ? data
-        : Object.values(data.proofs || {});
-      const original = items.find((item) => item.token_id === tokenId);
-      if (original) {
-        console.log("Original image length:", original.image.length);
-        console.log("Current image length:", item.image.length);
-        console.log(
-          "Lengths match:",
-          original.image.length === item.image.length,
-        );
-        console.log("Images match:", original.image === item.image);
-        console.log(
-          "Attributes match:",
-          JSON.stringify(original.attributes) ===
-            JSON.stringify(item.attributes),
-        );
-        console.log(
-          "Proofs match:",
-          JSON.stringify(original.merkle_proof || original.proof) ===
-            JSON.stringify(item.proof),
-        );
-
-        if (original.image !== item.image) {
-          // Find first difference
-          for (
-            let i = 0;
-            i < Math.min(original.image.length, item.image.length);
-            i++
-          ) {
-            if (original.image[i] !== item.image[i]) {
-              console.log(`First difference at position ${i}:`);
-              console.log(
-                "Original:",
-                original.image.substring(Math.max(0, i - 10), i + 10),
-              );
-              console.log(
-                "Current:",
-                item.image.substring(Math.max(0, i - 10), i + 10),
-              );
-              break;
-            }
-          }
-        }
-      }
-    })
-    .catch((e) => console.error("Failed to fetch original:", e));
-
-  const isValid = verifyMerkleProof(
-    tokenId,
-    item.image,
-    item.attributes,
-    item.proof,
-    CONTRACT_CONFIG.MERKLE_ROOT,
-  );
-
-  if (!isValid) {
-    console.error("Local proof verification failed!");
-    console.error("Token ID:", tokenId);
-    console.error("SVG length:", item.image.length);
-    console.error("Attributes:", item.attributes);
-    console.error("Proof:", item.proof);
-    Notification.show(
-      "Proof verification failed locally. The data doesn't match the Merkle tree.",
-      "error",
-    );
-    return;
-  }
-
-  console.log("Local verification passed!");
-
   const provider = wallet.getEthersProvider();
   const signer = await provider.getSigner();
   const contract = new ethers.Contract(
@@ -233,11 +156,69 @@ async function mintToken(item) {
   Notification.show(`Minting ${item.name}...`, "info");
 
   try {
-    // Convert attributes array to JSON string if needed
-    const attributesString =
-      typeof item.attributes === "string"
-        ? item.attributes
-        : JSON.stringify(item.attributes);
+    // Attributes should already be a compact JSON string from loadMetadata
+    const attributesString = item.attributes;
+
+    // Debug: Log what we're sending
+    console.log("Claiming token:", tokenId);
+    console.log("Image length:", item.image?.length);
+    console.log("Attributes string:", attributesString);
+    console.log("Attributes string length:", attributesString?.length);
+    console.log("Proof:", item.proof);
+    console.log("Proof length:", item.proof?.length);
+
+    // Fetch original data for comparison
+    const chunkNum = Math.floor(tokenId / 1000) + 1;
+    fetch(`./data/Ooman_metadata_${chunkNum}.json`)
+      .then((r) => r.json())
+      .then((data) => {
+        const original = data.find((d) => d.token_id === tokenId);
+        if (original) {
+          console.log("=== ORIGINAL DATA ===");
+          console.log("Original image:", original.image?.substring(0, 100));
+          console.log("Original image length:", original.image?.length);
+          const origAttrsStr = JSON.stringify(original.attributes);
+          console.log("Original attributes:", origAttrsStr);
+          console.log("Current attributes:", attributesString);
+          console.log("Current image matches:", original.image === item.image);
+          console.log(
+            "Current attributes matches:",
+            origAttrsStr === attributesString,
+          );
+
+          // Hex comparison to find any encoding differences
+          if (origAttrsStr !== attributesString) {
+            console.log("=== ATTRIBUTE DIFFERENCES ===");
+            const encoder = new TextEncoder();
+            const origBytes = encoder.encode(origAttrsStr);
+            const currBytes = encoder.encode(attributesString);
+            console.log(
+              "Original bytes:",
+              Array.from(origBytes)
+                .map((b) => b.toString(16).padStart(2, "0"))
+                .join(""),
+            );
+            console.log(
+              "Current bytes:",
+              Array.from(currBytes)
+                .map((b) => b.toString(16).padStart(2, "0"))
+                .join(""),
+            );
+            for (
+              let i = 0;
+              i < Math.min(origBytes.length, currBytes.length);
+              i++
+            ) {
+              if (origBytes[i] !== currBytes[i]) {
+                console.log(
+                  `First difference at byte ${i}: orig=0x${origBytes[i].toString(16)}, curr=0x${currBytes[i].toString(16)}`,
+                );
+                break;
+              }
+            }
+          }
+        }
+      });
 
     const tx = await contract.claim(
       tokenId,
@@ -258,16 +239,35 @@ async function mintToken(item) {
     return tx;
   } catch (error) {
     console.error("Mint error:", error);
+    console.error("Error data:", error.data);
+    console.error("Error reason:", error.reason);
+    console.error("Error code:", error.code);
 
-    // Provide more specific error messages
-    if (error.message?.includes("invalid proof")) {
+    // Decode custom errors
+    if (error.data === "0x09bde339") {
       Notification.show(
         "Invalid proof: The data doesn't match the Merkle tree. " +
-          "Make sure you're using the exact SVG and attributes from the JSON file.",
+          "Token ID: " +
+          tokenId +
+          ". " +
+          "Make sure you're using the exact image and attributes from the JSON file.",
+        "error",
+      );
+    } else if (error.data === "0xdbe49be4") {
+      Notification.show("This token has already been minted", "error");
+    } else if (error.data === "0x82b42900") {
+      Notification.show("Invalid token ID", "error");
+    } else if (error.message?.includes("invalid proof")) {
+      Notification.show(
+        "Invalid proof: The data doesn't match the Merkle tree. " +
+          "Make sure you're using the exact image and attributes from the JSON file.",
         "error",
       );
     } else {
-      Notification.show(`Failed to mint: ${error.message}`, "error");
+      Notification.show(
+        `Failed to mint: ${error.message || error.reason || "Unknown error"}`,
+        "error",
+      );
     }
     throw error;
   }
@@ -298,6 +298,13 @@ const fetchChunk = async (file) => {
   return res.json();
 };
 
+// Fetch raw text to preserve exact JSON formatting
+const fetchChunkRaw = async (file) => {
+  const res = await fetch(file);
+  if (!res.ok) throw new Error(`Failed to load ${file}`);
+  return res.text();
+};
+
 const deferExecution = (fn) =>
   "requestIdleCallback" in window
     ? requestIdleCallback(fn, { timeout: 2000 })
@@ -311,22 +318,47 @@ async function loadMetadata() {
       files.slice(CONFIG.INITIAL_DATA_CHUNKS),
     ];
 
-    const results = await Promise.allSettled(initial.map(fetchChunk));
+    // Fetch raw text to preserve exact JSON formatting
+    const results = await Promise.allSettled(initial.map(fetchChunkRaw));
     state.metadata = results
       .filter((r) => r.status === "fulfilled")
       .flatMap((r) => {
+        // Parse the JSON but extract exact attribute strings
+        const rawText = r.value;
+        const data = JSON.parse(rawText);
+
         // Handle new metadata format: array of objects with merkle_proof field
-        const data = r.value;
         if (Array.isArray(data)) {
-          return data.map((item) => ({
-            ...item,
-            proof: item.merkle_proof || item.proof,
-            attributes: item.attributes,
-            attributesParsed:
-              typeof item.attributes === "string"
-                ? JSON.parse(item.attributes)
-                : item.attributes,
-          }));
+          return data.map((item, index) => {
+            // Extract the exact attributes string from the raw JSON
+            // Find the position of "attributes": in the raw text for this item
+            const itemStart = rawText.indexOf('"token_id": ' + item.token_id);
+            const itemEnd = rawText.indexOf(
+              '"token_id": ' + (item.token_id + 1),
+            );
+            const itemSection =
+              itemEnd > 0
+                ? rawText.substring(itemStart, itemEnd)
+                : rawText.substring(itemStart);
+
+            // Find attributes in this section (handles escaped JSON string)
+            const attrsMatch = itemSection.match(
+              /"attributes":\s*"((?:\\.|[^"\\])*)"/,
+            );
+            // Use exact string from file, fallback to the parsed value
+            const attributesString = attrsMatch
+              ? JSON.parse('"' + attrsMatch[1] + '"')
+              : item.attributes;
+            // Parse the string to get the array for UI
+            const attributesParsed = JSON.parse(attributesString);
+
+            return {
+              ...item,
+              proof: item.merkle_proof || item.proof,
+              attributes: attributesString, // Exact string for contract
+              attributesParsed: attributesParsed, // Array for UI
+            };
+          });
         }
         // Legacy format: object with proofs property
         return Object.values(data.proofs || {}).map((item) => ({
