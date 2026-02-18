@@ -27,7 +27,7 @@ const CONTRACT_CONFIG = {
 // =============================================================
 
 const CONFIG = {
-  DATA_CHUNK_COUNT: 9,
+  DATA_CHUNK_COUNT: 10,
   DATA_CHUNK_PATTERN: "./data/Ooman_metadata_{i}.json",
   INITIAL_DATA_CHUNKS: 1,
   RENDER_BATCH_SIZE: 100,
@@ -66,10 +66,7 @@ async function isTokenMinted(tokenId) {
     if (wallet && wallet.isConnected()) {
       provider = wallet.getEthersProvider();
     } else {
-      // Support both ethers v5 and v6
-      const JsonRpcProvider =
-        ethers.JsonRpcProvider || ethers.providers?.JsonRpcProvider;
-      provider = new JsonRpcProvider("https://mainnet.optimism.io");
+      provider = new ethers.JsonRpcProvider(networkConfigs.ethereum.rpcUrl);
     }
 
     const contract = new ethers.Contract(
