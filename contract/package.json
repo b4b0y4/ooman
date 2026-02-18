@@ -1,6 +1,0 @@
-{
-  "dependencies": {
-    "js-sha3": "^0.9.3",
-    "keccak": "^3.0.4"
-  }
-}

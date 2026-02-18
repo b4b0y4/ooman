@@ -6,7 +6,7 @@ import { ConnectWallet, Notification, getRpcUrl } from "./libs/dappkit.js";
 // =============================================================
 
 const CONTRACT_CONFIG = {
-  ADDRESS: "0x8A3cc414644CEBD656397aB8A5C7Cc4bb1acEd0E",
+  ADDRESS: "",
 
   ABI: [
     "function claim(uint256 tokenId, string calldata image, string calldata attributes, bytes32[] calldata proof) external",
@@ -115,12 +115,6 @@ async function mintToken(item) {
     return;
   }
 
-  // Debug: Verify data matches the proof
-  console.log("Minting token:", tokenId);
-  console.log("SVG length:", item.image?.length);
-  console.log("Attributes:", item.attributes);
-  console.log("Proof length:", item.proof?.length);
-
   // Verify we have all required data
   if (
     !item.image ||
@@ -128,11 +122,6 @@ async function mintToken(item) {
     !item.proof ||
     item.proof.length === 0
   ) {
-    console.error("Missing required data:", {
-      hasImage: !!item.image,
-      hasAttributes: !!item.attributes,
-      proofLength: item.proof?.length,
-    });
     Notification.show("Missing proof data. Please reload the page.", "error");
     return;
   }
@@ -145,80 +134,10 @@ async function mintToken(item) {
     signer,
   );
 
-  // Get contract's Merkle root for verification
-  try {
-    const contractRoot = await contract.MERKLE_ROOT();
-    console.log("Contract Merkle Root:", contractRoot);
-  } catch (e) {
-    console.warn("Could not fetch contract root:", e);
-  }
-
   Notification.show(`Minting ${item.name}...`, "info");
 
   try {
-    // Attributes should already be a compact JSON string from loadMetadata
     const attributesString = item.attributes;
-
-    // Debug: Log what we're sending
-    console.log("Claiming token:", tokenId);
-    console.log("Image length:", item.image?.length);
-    console.log("Attributes string:", attributesString);
-    console.log("Attributes string length:", attributesString?.length);
-    console.log("Proof:", item.proof);
-    console.log("Proof length:", item.proof?.length);
-
-    // Fetch original data for comparison
-    const chunkNum = Math.floor(tokenId / 1000) + 1;
-    fetch(`./data/Ooman_metadata_${chunkNum}.json`)
-      .then((r) => r.json())
-      .then((data) => {
-        const original = data.find((d) => d.token_id === tokenId);
-        if (original) {
-          console.log("=== ORIGINAL DATA ===");
-          console.log("Original image:", original.image?.substring(0, 100));
-          console.log("Original image length:", original.image?.length);
-          const origAttrsStr = JSON.stringify(original.attributes);
-          console.log("Original attributes:", origAttrsStr);
-          console.log("Current attributes:", attributesString);
-          console.log("Current image matches:", original.image === item.image);
-          console.log(
-            "Current attributes matches:",
-            origAttrsStr === attributesString,
-          );
-
-          // Hex comparison to find any encoding differences
-          if (origAttrsStr !== attributesString) {
-            console.log("=== ATTRIBUTE DIFFERENCES ===");
-            const encoder = new TextEncoder();
-            const origBytes = encoder.encode(origAttrsStr);
-            const currBytes = encoder.encode(attributesString);
-            console.log(
-              "Original bytes:",
-              Array.from(origBytes)
-                .map((b) => b.toString(16).padStart(2, "0"))
-                .join(""),
-            );
-            console.log(
-              "Current bytes:",
-              Array.from(currBytes)
-                .map((b) => b.toString(16).padStart(2, "0"))
-                .join(""),
-            );
-            for (
-              let i = 0;
-              i < Math.min(origBytes.length, currBytes.length);
-              i++
-            ) {
-              if (origBytes[i] !== currBytes[i]) {
-                console.log(
-                  `First difference at byte ${i}: orig=0x${origBytes[i].toString(16)}, curr=0x${currBytes[i].toString(16)}`,
-                );
-                break;
-              }
-            }
-          }
-        }
-      });
 
     const tx = await contract.claim(
       tokenId,
@@ -238,19 +157,10 @@ async function mintToken(item) {
 
     return tx;
   } catch (error) {
-    console.error("Mint error:", error);
-    console.error("Error data:", error.data);
-    console.error("Error reason:", error.reason);
-    console.error("Error code:", error.code);
-
     // Decode custom errors
     if (error.data === "0x09bde339") {
       Notification.show(
-        "Invalid proof: The data doesn't match the Merkle tree. " +
-          "Token ID: " +
-          tokenId +
-          ". " +
-          "Make sure you're using the exact image and attributes from the JSON file.",
+        "Invalid proof: The data doesn't match the Merkle tree.",
         "error",
       );
     } else if (error.data === "0xdbe49be4") {
@@ -259,8 +169,7 @@ async function mintToken(item) {
       Notification.show("Invalid token ID", "error");
     } else if (error.message?.includes("invalid proof")) {
       Notification.show(
-        "Invalid proof: The data doesn't match the Merkle tree. " +
-          "Make sure you're using the exact image and attributes from the JSON file.",
+        "Invalid proof: The data doesn't match the Merkle tree.",
         "error",
       );
     } else {
@@ -292,13 +201,6 @@ const getChunkFiles = () =>
     CONFIG.DATA_CHUNK_PATTERN.replace("{i}", i + 1),
   );
 
-const fetchChunk = async (file) => {
-  const res = await fetch(file);
-  if (!res.ok) throw new Error(`Failed to load ${file}`);
-  return res.json();
-};
-
-// Fetch raw text to preserve exact JSON formatting
 const fetchChunkRaw = async (file) => {
   const res = await fetch(file);
   if (!res.ok) throw new Error(`Failed to load ${file}`);
@@ -331,24 +233,35 @@ async function loadMetadata() {
         if (Array.isArray(data)) {
           return data.map((item, index) => {
             // Extract the exact attributes string from the raw JSON
-            // Find the position of "attributes": in the raw text for this item
-            const itemStart = rawText.indexOf('"token_id": ' + item.token_id);
-            const itemEnd = rawText.indexOf(
-              '"token_id": ' + (item.token_id + 1),
-            );
-            const itemSection =
-              itemEnd > 0
-                ? rawText.substring(itemStart, itemEnd)
-                : rawText.substring(itemStart);
+            // Find the position of this item's "name" field to locate the item boundary
+            const namePattern = '"name": "' + item.name + '"';
+            const itemStart = rawText.indexOf(namePattern);
+
+            // Find the next item by looking for the next "name": "Ooman #..."
+            // or end of array
+            const nextMatch = rawText
+              .substring(itemStart + namePattern.length)
+              .match(/"name": "Ooman #\d+"/);
+            const itemEnd = nextMatch
+              ? itemStart + namePattern.length + nextMatch.index
+              : rawText.length;
+            const itemSection = rawText.substring(itemStart, itemEnd);
 
             // Find attributes in this section (handles escaped JSON string)
             const attrsMatch = itemSection.match(
               /"attributes":\s*"((?:\\.|[^"\\])*)"/,
             );
-            // Use exact string from file, fallback to the parsed value
-            const attributesString = attrsMatch
-              ? JSON.parse('"' + attrsMatch[1] + '"')
-              : item.attributes;
+
+            // Extract the exact string as stored in the JSON (unescape it)
+            let attributesString;
+            if (attrsMatch) {
+              // attrsMatch[1] contains the escaped content like [{\trait_type\":...}]
+              // We need to unescape it to get the raw string
+              attributesString = attrsMatch[1].replace(/\\(.)/g, "$1");
+            } else {
+              attributesString = item.attributes;
+            }
+
             // Parse the string to get the array for UI
             const attributesParsed = JSON.parse(attributesString);
 
