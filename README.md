@@ -43,7 +43,7 @@ forge build
 ```bash
 
 cd contract
-MAX_SUPPLY=10000 forge script script/Deploy.s.sol \
+MAX_SUPPLY=10 forge script script/Deploy.s.sol \
   --rpc-url https://mainnet.optimism.io \
   --broadcast \
   --verify \
@@ -58,7 +58,7 @@ MAX_SUPPLY=10000 forge script script/Deploy.s.sol \
 ```bash
 
 MAX_SUPPLY=10000 forge script script/Deploy.s.sol \
-  --rpc-url https://eth-mainnet.g.alchemy.com/v2/YOUR_KEY \
+  --rpc-url https://eth.llamarpc.com \
   --broadcast \
   --verify \
   --etherscan-api-key $ETHERSCAN_KEY \
@@ -87,12 +87,9 @@ Each token entry contains:
   "name": "Ooman #0",
   "description": "10k onchain Ooman SVGs!",
   "image": "data:image/svg+xml;utf8,%3Csvg%20...",
-  "attributes": [
-    {"trait_type": "Background", "value": "mint"},
-    {"trait_type": "Type", "value": "human"},
-    ...
-  ],
-  "merkle_root": "0x1b63306dd23173f53434bc807715e8ac1a2dc41f60011d8ba972f56590fa526d",
+  "attributes": "[{"trait_type":"Background","value":"mint"},
+    {"trait_type": "Type","value":"human"},...]",
+  "merkle_root": "",
   "merkle_proof": [
     "0xabc...",
     "0xdef...",
