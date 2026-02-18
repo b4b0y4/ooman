@@ -51,8 +51,14 @@ contract Ooman is ERC721 {
         if (tokenId >= MAX_SUPPLY) revert InvalidTokenId();
         if (isMinted[tokenId]) revert AlreadyMinted();
         
-        // Create leaf: hash of token data (matching the metadata format)
-        bytes32 leaf = keccak256(abi.encodePacked(tokenId, image, attributes));
+        // Create leaf matching the JS generator's double-hash pattern:
+        // 1. Hash image and attributes separately
+        // 2. Pack: tokenId + imageHash + attributesHash
+        // 3. Double hash for second-preimage protection
+        bytes32 imageHash = keccak256(bytes(image));
+        bytes32 attributesHash = keccak256(bytes(attributes));
+        bytes32 innerHash = keccak256(abi.encodePacked(tokenId, imageHash, attributesHash));
+        bytes32 leaf = keccak256(abi.encodePacked(innerHash));
         
         // Verify proof
         if (!MerkleProof.verify(proof, MERKLE_ROOT, leaf)) revert InvalidProof();
