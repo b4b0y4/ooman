@@ -6,7 +6,7 @@ import { ConnectWallet, Notification, getRpcUrl } from "./libs/dappkit.js";
 // =============================================================
 
 const CONTRACT_CONFIG = {
-  ADDRESS: "",
+  ADDRESS: "0x8100fb503b634f5864278D45bd06D983108dc675",
 
   ABI: [
     "function claim(uint256 tokenId, string calldata image, string calldata attributes, bytes32[] calldata proof) external",
