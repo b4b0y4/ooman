@@ -6,7 +6,7 @@ import { ConnectWallet, Notification, getRpcUrl } from "./libs/dappkit.js";
 // =============================================================
 
 const CONTRACT_CONFIG = {
-  ADDRESS: "0x8100fb503b634f5864278D45bd06D983108dc675",
+  ADDRESS: "0x2E6966b72355e554e4C495E705D7c8b942a06756",
 
   ABI: [
     "function claim(uint256 tokenId, string calldata image, string calldata attributes, bytes32[] calldata proof) external",
@@ -143,16 +143,10 @@ async function mintToken(item) {
       item.proof,
     );
 
-    Notification.track({
+    Notification.track(tx, {
       label: `Mint ${item.name}`,
-      txHash: tx.hash,
-      onSuccess: () =>
-        Notification.show(`Successfully minted ${item.name}!`, "success"),
-      onError: (err) =>
-        Notification.show(`Failed to mint: ${err.message}`, "error"),
     });
-
-    return tx;
+    await tx.wait();
   } catch (error) {
     // Decode custom errors
     if (error.data === "0x09bde339") {
