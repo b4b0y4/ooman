@@ -112,7 +112,6 @@ async function mintToken(item) {
     return;
   }
 
-  // Verify we have all required data
   if (
     !item.image ||
     !item.attributes ||
@@ -148,7 +147,6 @@ async function mintToken(item) {
     });
     await tx.wait();
   } catch (error) {
-    // Decode custom errors
     if (error.data === "0x09bde339") {
       Notification.show(
         "Invalid proof: The data doesn't match the Merkle tree.",
@@ -164,10 +162,10 @@ async function mintToken(item) {
         "error",
       );
     } else {
-      Notification.show(
-        `Failed to mint: ${error.message || error.reason || "Unknown error"}`,
-        "error",
-      );
+      const rawErrorMessage = error.message || error.reason || "Unknown error";
+      const cleanErrorMessage =
+        rawErrorMessage.split("(")[0].trim() || "Unknown error";
+      Notification.show(`Failed to mint: ${cleanErrorMessage}`, "error");
     }
     throw error;
   }
@@ -211,25 +209,18 @@ async function loadMetadata() {
       files.slice(CONFIG.INITIAL_DATA_CHUNKS),
     ];
 
-    // Fetch raw text to preserve exact JSON formatting
     const results = await Promise.allSettled(initial.map(fetchChunkRaw));
     state.metadata = results
       .filter((r) => r.status === "fulfilled")
       .flatMap((r) => {
-        // Parse the JSON but extract exact attribute strings
         const rawText = r.value;
         const data = JSON.parse(rawText);
 
-        // Handle new metadata format: array of objects with merkle_proof field
         if (Array.isArray(data)) {
           return data.map((item, index) => {
-            // Extract the exact attributes string from the raw JSON
-            // Find the position of this item's "name" field to locate the item boundary
             const namePattern = '"name": "' + item.name + '"';
             const itemStart = rawText.indexOf(namePattern);
 
-            // Find the next item by looking for the next "name": "Ooman #..."
-            // or end of array
             const nextMatch = rawText
               .substring(itemStart + namePattern.length)
               .match(/"name": "Ooman #\d+"/);
@@ -238,33 +229,27 @@ async function loadMetadata() {
               : rawText.length;
             const itemSection = rawText.substring(itemStart, itemEnd);
 
-            // Find attributes in this section (handles escaped JSON string)
             const attrsMatch = itemSection.match(
               /"attributes":\s*"((?:\\.|[^"\\])*)"/,
             );
 
-            // Extract the exact string as stored in the JSON (unescape it)
             let attributesString;
             if (attrsMatch) {
-              // attrsMatch[1] contains the escaped content like [{\trait_type\":...}]
-              // We need to unescape it to get the raw string
               attributesString = attrsMatch[1].replace(/\\(.)/g, "$1");
             } else {
               attributesString = item.attributes;
             }
 
-            // Parse the string to get the array for UI
             const attributesParsed = JSON.parse(attributesString);
 
             return {
               ...item,
               proof: item.merkle_proof || item.proof,
-              attributes: attributesString, // Exact string for contract
-              attributesParsed: attributesParsed, // Array for UI
+              attributes: attributesString,
+              attributesParsed: attributesParsed,
             };
           });
         }
-        // Legacy format: object with proofs property
         return Object.values(data.proofs || {}).map((item) => ({
           ...item,
           attributes: item.attributes,
