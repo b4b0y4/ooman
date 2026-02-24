@@ -14,6 +14,7 @@ const CONTRACT_CONFIG = {
     "function getSVG(uint256 tokenId) external view returns (string memory)",
     "function getAttributes(uint256 tokenId) external view returns (string memory)",
     "function isMinted(uint256 tokenId) external view returns (bool)",
+    "function ownerOf(uint256 tokenId) external view returns (address)",
     "function MERKLE_ROOT() external view returns (bytes32)",
     "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
     "error AlreadyMinted()",
@@ -66,7 +67,7 @@ async function isTokenMinted(tokenId) {
     if (wallet && wallet.isConnected()) {
       provider = wallet.getEthersProvider();
     } else {
-      provider = new ethers.JsonRpcProvider(networkConfigs.ethereum.rpcUrl);
+      provider = new ethers.JsonRpcProvider(getRpcUrl("ethereum"));
     }
 
     const contract = new ethers.Contract(
@@ -79,6 +80,59 @@ async function isTokenMinted(tokenId) {
     console.error("Error checking mint status:", error);
     return false;
   }
+}
+
+async function getTokenOwner(tokenId) {
+  if (!CONTRACT_CONFIG.ADDRESS) return null;
+
+  try {
+    let provider;
+    if (wallet && wallet.isConnected()) {
+      provider = wallet.getEthersProvider();
+    } else {
+      provider = new ethers.JsonRpcProvider(getRpcUrl("ethereum"));
+    }
+
+    const contract = new ethers.Contract(
+      CONTRACT_CONFIG.ADDRESS,
+      CONTRACT_CONFIG.ABI,
+      provider,
+    );
+    return await contract.ownerOf(tokenId);
+  } catch (error) {
+    console.error("Error fetching token owner:", error);
+    return null;
+  }
+}
+
+function shortenAddress(address, start = 6, end = 4) {
+  if (!address || address.length <= start + end) return address || "";
+  return `${address.slice(0, start)}...${address.slice(-end)}`;
+}
+
+async function resolveOwnerDisplay(address) {
+  if (!address) return null;
+
+  try {
+    const order =
+      wallet.getNameResolutionOrder() === "ens-first"
+        ? ["ens", "wns"]
+        : ["wns", "ens"];
+
+    for (const source of order) {
+      if (source === "wns") {
+        const wnsName = await wallet.resolveWNS(address);
+        if (wnsName) return `${wnsName}`;
+      } else {
+        const ens = await wallet.resolveENS(address);
+        if (ens?.name) return `${ens.name}`;
+      }
+    }
+  } catch (error) {
+    console.error("Error resolving owner name:", error);
+  }
+
+  return shortenAddress(address);
 }
 
 async function mintToken(item) {
@@ -616,7 +670,10 @@ async function openModal(itemName) {
   if (mobilImg) mobilImg.src = imageUri;
 
   document.getElementById("modal-title").innerHTML = colorize(item.name);
-  document.getElementById("modal-traits").innerHTML = item.attributesParsed
+  const ownerEl = document.getElementById("modal-owner");
+  if (ownerEl) ownerEl.textContent = "";
+  const traitsEl = document.getElementById("modal-traits");
+  traitsEl.innerHTML = item.attributesParsed
     .map(
       (attr) => `
       <div class="modal-trait">
@@ -632,11 +689,15 @@ async function openModal(itemName) {
   const claimBtn = document.getElementById("modal-claim");
 
   let isMinted = false;
-  if (wallet.isConnected() && CONTRACT_CONFIG.ADDRESS) {
+  let ownerAddress = null;
+  if (CONTRACT_CONFIG.ADDRESS) {
     const tokenId = parseTokenId(item.name);
     if (tokenId !== null) {
       try {
         isMinted = await isTokenMinted(tokenId);
+        if (isMinted) {
+          ownerAddress = await getTokenOwner(tokenId);
+        }
       } catch (error) {
         console.error("Error checking mint status:", error);
       }
@@ -645,6 +706,14 @@ async function openModal(itemName) {
 
   if (isMinted) {
     claimBtn.style.display = "none";
+    if (ownerAddress) {
+      const ownerDisplay = await resolveOwnerDisplay(ownerAddress);
+      if (ownerEl)
+        ownerEl.innerHTML = `
+      <span class="modal-owner-label">Owner:</span>
+      <span data-copy="${ownerAddress}">${ownerDisplay}</span>
+    `;
+    }
   } else {
     claimBtn.style.display = "block";
     claimBtn.textContent = "Claim";
