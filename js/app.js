@@ -34,6 +34,7 @@ const CONFIG = {
   RENDER_BATCH_SIZE: 100,
   LAZY_ROOT_MARGIN: "100px",
   LAZY_LOAD_BATCH_SIZE: 50,
+  CLAIMING_ENABLED: true,
 };
 
 // =============================================================
@@ -687,20 +688,19 @@ async function openModal(itemName) {
   document.getElementById("modal-download").onclick = () => download(item);
 
   const claimBtn = document.getElementById("modal-claim");
-
-  let isMinted = false;
+  const tokenId = parseTokenId(item.name);
+  let isMinted = !CONFIG.CLAIMING_ENABLED;
   let ownerAddress = null;
-  if (CONTRACT_CONFIG.ADDRESS) {
-    const tokenId = parseTokenId(item.name);
-    if (tokenId !== null) {
-      try {
+  if (CONTRACT_CONFIG.ADDRESS && tokenId !== null) {
+    try {
+      if (CONFIG.CLAIMING_ENABLED) {
         isMinted = await isTokenMinted(tokenId);
-        if (isMinted) {
-          ownerAddress = await getTokenOwner(tokenId);
-        }
-      } catch (error) {
-        console.error("Error checking mint status:", error);
       }
+      if (isMinted) {
+        ownerAddress = await getTokenOwner(tokenId);
+      }
+    } catch (error) {
+      console.error("Error checking mint/owner status:", error);
     }
   }
 
