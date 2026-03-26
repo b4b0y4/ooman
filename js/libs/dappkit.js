@@ -632,7 +632,16 @@ export class ConnectWallet {
     if (!account) return;
     this.setStorageState(STORAGE_KEYS.IS_CONNECTED, "true");
     this.setStorageState(STORAGE_KEYS.LAST_WALLET, providerName);
-    this.updateAddress(account);
+
+    const currentAddress =
+      this.elements.connectBtn?.getAttribute("data-address");
+    if (
+      !currentAddress ||
+      currentAddress.toLowerCase() !== account.toLowerCase()
+    ) {
+      this.updateAddress(account);
+    }
+
     this.updateNetworkStatus(chainId);
     this.syncUnsupportedNetworkNotice(chainId);
     if (render) this.render();
