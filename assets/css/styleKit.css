@@ -58,10 +58,6 @@ header {
   align-items: center;
 }
 
-header .logo {
-  margin-right: 10px;
-}
-
 .wrapper {
   display: flex;
   justify-content: end;
@@ -1155,7 +1151,7 @@ h3 {
   }
 
   h1 .gallery-text {
-    display: none;
+    display: block;
   }
 
   .available-filters {
